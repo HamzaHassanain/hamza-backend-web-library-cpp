@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include <http_objects.hpp>
-#include <http_headers.hpp>
+#include <http-server/includes/http_objects.hpp>
+#include <http-server/includes/http_headers.hpp>
 #include <web_exceptions.hpp>
 
 namespace hamza_web

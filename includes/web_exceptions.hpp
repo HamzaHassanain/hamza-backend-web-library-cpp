@@ -1,5 +1,5 @@
 #pragma once
-#include <exceptions.hpp>
+#include <http-server/includes/exceptions.hpp>
 
 namespace hamza_web
 {

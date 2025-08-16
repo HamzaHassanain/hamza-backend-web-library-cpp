@@ -18,11 +18,6 @@ public:
 
 using req_handler = web_request_handler_t<CR, web_response>;
 
-hamza_web::web_listen_success_callback_t listen_success_callback = []() -> void
-{
-    std::cout << "Server is listening on port 8080" << std::endl;
-};
-
 req_handler auth = [](std::shared_ptr<CR> req, std::shared_ptr<hamza_web::web_response> res) -> int
 {
     res->add_cookie("session_id", "123456");
@@ -90,7 +85,7 @@ int main()
 {
     try
     {
-        web_server<CR> server("0.0.0.0", 8080);
+        web_server<CR> server("127.0.0.1", 8080);
 
         auto index_route = ptr_route(new web_route<CR>("/", methods::GET, {auth, index_handler}));
         auto create_connection_route = ptr_route(new web_route<CR>("/create-connection", methods::POST, {auth, form_parser, create_connection_handler}));
