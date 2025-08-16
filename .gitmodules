@@ -1,0 +1,3 @@
+[submodule "libs/http-server"]
+	path = libs/http-server
+	url = https://github.com/HamzaHassanain/hamza-http-server-lib.git
