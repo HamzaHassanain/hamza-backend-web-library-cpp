@@ -39,7 +39,7 @@ namespace hamza_web
         }
 
         hamza_http::http_server server;
-        std::shared_ptr<web_router<RequestType, ResponseType>> router;
+        std::vector<std::shared_ptr<web_router<RequestType, ResponseType>>> routers;
         std::string host;
         uint16_t port;
         std::vector<std::string> static_directories;
@@ -84,6 +84,8 @@ namespace hamza_web
                 buffer << file.rdbuf();
                 res->set_body(buffer.str());
                 res->set_content_type(get_mime_type_from_extension(get_file_extension_from_uri(uri)));
+                res->set_status(200, "OK");
+                res->end();
             }
             catch (const std::exception &e)
             {
@@ -91,6 +93,41 @@ namespace hamza_web
                 res->text("500 Internal Server Error: " + std::string(e.what()));
             }
         }
+        using request_handler_t = std::function<void(std::shared_ptr<RequestType>, std::shared_ptr<ResponseType>)>;
+        request_handler_t request_handler = [this]([[maybe_unused]] std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res) mutable -> void
+        {
+            {
+                bool handled = false;
+                if (is_uri_static(req->get_uri()))
+                {
+
+                    server_static(req, res);
+                    handled = true;
+                }
+                else
+                {
+                    for (const auto &router : routers)
+                    {
+
+                        if (router->handle_request(req, res))
+                        {
+                            handled = true;
+                            break;
+                        }
+                    }
+                }
+                if (!handled)
+                    handle_unmatched_route(req, res);
+
+                res->end();
+            }
+        };
+        request_handler_t handle_unmatched_route = []([[maybe_unused]] std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res)
+        {
+            res->set_status(404, "Not Found");
+            res->text("404 Not Found");
+            res->end();
+        };
 
     public:
         web_server(const std::string &host, uint16_t port)
@@ -106,14 +143,7 @@ namespace hamza_web
 
                 try
                 {
-                    std::thread([this, web_req_ptr, web_res_ptr]() mutable
-                                {
-                                    if (is_uri_static(web_req_ptr->get_uri()))
-                                        server_static(web_req_ptr, web_res_ptr);
-                                    else
-                                        router->handle_request(web_req_ptr, web_res_ptr);
-                                    web_res_ptr->end(); })
-                        .detach();
+                    std::thread(request_handler, web_req_ptr, web_res_ptr).detach();
                 }
                 catch (const std::exception &e)
                 {
@@ -141,14 +171,17 @@ namespace hamza_web
 
         void register_router(std::shared_ptr<web_router<RequestType, ResponseType>> router)
         {
-            this->router = router;
+            this->routers.push_back(router);
         }
 
         void register_static(const std::string &directory)
         {
             static_directories.push_back(directory);
         }
-
+        void register_unmatched_route_handler(const web_request_handler_t<RequestType, ResponseType> &handler)
+        {
+            handle_unmatched_route = handler;
+        }
         void listen(web_listen_success_callback_t callback = nullptr,
                     web_error_callback_t error_callback = nullptr)
         {

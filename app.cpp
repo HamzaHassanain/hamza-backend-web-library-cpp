@@ -139,6 +139,11 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
     }
 };
 
+H middleware = [](std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> int
+{
+    throw hamza_web::web_unauthorized_exception("Cannot Access Resource, Unauthorized");
+};
+
 int main()
 {
     try
@@ -146,12 +151,20 @@ int main()
         web_server<> server("127.0.0.1", 8080);
 
         auto index_route = std::make_shared<web_route<>>("/", methods::GET, std::vector<H>{index_handler});
+        auto other_route = std::make_shared<web_route<>>("/other", methods::GET, std::vector<H>{index_handler});
 
         auto router = std::make_shared<web_router<>>();
+        auto other_router = std::make_shared<web_router<>>();
+
         router->register_route(index_route);
+
+        other_router->register_route(other_route);
+
+        other_router->register_middleware(middleware);
 
         server.register_static("static");
         server.register_router(router);
+        server.register_router(other_router);
 
         server.listen();
     }

@@ -20,31 +20,42 @@ namespace hamza_web
     class web_router
     {
         std::vector<std::shared_ptr<web_route<RequestType, ResponseType>>> routes;
-        web_request_handler_t<RequestType, ResponseType> default_handler;
+        std::vector<web_request_handler_t<RequestType, ResponseType>> middlewares;
 
     public:
         friend class web_server<RequestType, ResponseType>;
 
-        web_router()
-        {
-            default_handler = []([[maybe_unused]] std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res) -> int
-            {
-                res->set_status(404, "Not Found");
-                res->text("404 Not Found");
-                res->end();
-                return EXIT;
-            };
-        }
+        web_router() = default;
 
         web_router(const web_router &) = delete;
         web_router &operator=(const web_router &) = delete;
         web_router(web_router &&) = default;
         web_router &operator=(web_router &&) = default;
 
-        void handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
+        bool handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
         {
             try
             {
+                for (const auto &middleware : middlewares)
+                {
+                    auto result = middleware(request, response);
+                    if (result == EXIT)
+                    {
+                        response->end();
+                        return true;
+                    }
+
+                    if (result == ERROR)
+                    {
+                        throw web_general_exception("Middleware returned an error");
+                    }
+
+                    if (result != CONTINUE)
+                    {
+                        return true;
+                    }
+                }
+
                 for (const auto &route : routes)
                 {
                     if (route->match(request->get_path(), request->get_method()))
@@ -56,7 +67,7 @@ namespace hamza_web
                             if (resp == EXIT)
                             {
                                 response->end();
-                                return;
+                                return true;
                             }
                             if (resp == ERROR)
                             {
@@ -65,9 +76,8 @@ namespace hamza_web
                         }
                     }
                 }
-                default_handler(request, response);
-                response->end();
-                return;
+
+                return false;
             }
             catch (const web_general_exception &e)
             {
@@ -75,7 +85,7 @@ namespace hamza_web
                 response->set_status(e.get_status_code(), e.get_status_message());
                 response->text(e.what());
                 response->end();
-                return;
+                return true;
             }
         }
 
@@ -88,9 +98,9 @@ namespace hamza_web
             routes.push_back(route);
         }
 
-        void set_default_handler(const web_request_handler_t<RequestType, ResponseType> &handler)
+        void register_middleware(const web_request_handler_t<RequestType, ResponseType> &middleware)
         {
-            default_handler = std::move(handler);
+            middlewares.push_back(middleware);
         }
     };
 }
