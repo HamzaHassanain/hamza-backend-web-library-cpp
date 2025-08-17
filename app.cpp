@@ -5,83 +5,139 @@
 #include <web_router.hpp>
 #include <web_exceptions.hpp>
 #include <web_helpers.hpp>
-#include <html-builder/includes/builder.hpp>
+#include <html-builder/includes/element.hpp>
+#include <html-builder/includes/document.hpp>
+#include <html-builder/includes/document_parser.hpp>
 
 using namespace hamza_web;
+using namespace hamza_html_builder;
+using H = web_request_handler_t<>;
 
-// class CR : public hamza_web::web_request
-// {
-// public:
-//     std::map<std::string, std::string> form_data;
-//     CR(hamza_http::http_request &&req)
-//         : web_request(std::move(req)) {}
-// };
+std::map<std::string, std::string> cashed_files;
+std::map<std::string, std::string> params = {
+    {"heroTitle", "Welcome to My Portfolio"},
+    {"heroDescription", "Discover my projects and skills."},
+    {"aboutText", "I'm a passionate developer."},
+    {"aboutExtraText", "I love creating web applications."},
+    {"email", "hamza@example.com"},
+    {"github", "https://github.com/hamza"},
+    {"linkedin", "https://linkedin.com/in/hamza"},
+    {"title", "Hamza's Portfolio"},
+    {"subtitle", "Showcasing My Work"}};
 
-// using req_handler = web_request_handler_t<CR, web_response>;
+struct Project
+{
+    std::string name;
+    std::string description;
+    std::vector<std::string> tech_stack;
+};
 
-// req_handler auth = [](std::shared_ptr<CR> req, std::shared_ptr<hamza_web::web_response> res) -> int
-// {
-//     res->add_cookie("session_id", "123456");
-//     return hamza_web::CONTINUE;
-// };
+struct Skill
+{
+    std::string name;
+    std::string category;
+};
 
-// req_handler index_handler = [](std::shared_ptr<CR> req, std::shared_ptr<hamza_web::web_response> res) -> int
-// {
-//     try
-//     {
-//         std::ifstream file("html/index.html");
-//         if (file)
-//         {
-//             std::stringstream buffer;
-//             buffer << file.rdbuf();
-//             res->html(buffer.str());
-//         }
-//         else
-//         {
-//             throw hamza_web::web_internal_server_error_exception("Failed to open index.html");
-//         }
+std::vector<Project> projects = {
+    {"Algorithm Visualizer", "Interactive platform for visualizing sorting and graph algorithms.", {"JavaScript", "Canvas API"}},
+    {"Portfolio Website", "My personal portfolio showcasing my work.", {"HTML", "CSS", "JavaScript"}},
+    {"Chat Application", "Real-time chat application with WebSocket support.", {"Node.js", "WebSocket"}},
+};
 
-//         return hamza_web::EXIT;
-//     }
-//     catch (const web_general_exception &e)
-//     {
-//         std::cout << "Error Type " << e.type() << std::endl;
-//         std::cout << "Error: " << e.what() << std::endl;
-//         res->set_status(500, "Internal Server Error");
-//         res->text("Error: " + std::string(e.what()));
-//         res->end();
-//         return hamza_web::EXIT;
-//     }
-// };
+std::string join(const std::vector<std::string> &vec, const std::string &delimiter)
+{
+    std::ostringstream oss;
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+        oss << vec[i];
+        if (i < vec.size() - 1)
+            oss << delimiter;
+    }
+    return oss.str();
+}
+H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> int
+{
+    try
+    {
+        std::vector<std::string> needed_files = {
+            "html/body.html",
+            "html/footer.html",
+            "html/header.html",
+            "html/head.html",
+            "html/project.html",
+        };
+        for (const auto &file : needed_files)
+        {
+            std::string &content = cashed_files[file];
+            if (content.empty())
+            {
+                std::ifstream ifs(file);
+                if (!ifs)
+                {
+                    throw web_internal_server_error_exception("Failed to open " + file);
+                }
+                std::stringstream buffer;
+                buffer << ifs.rdbuf();
+                content = buffer.str();
+            }
+        }
+        auto &body_str = cashed_files["html/body.html"];
+        auto &footer_str = cashed_files["html/footer.html"];
+        auto &header_str = cashed_files["html/header.html"];
+        auto &head_str = cashed_files["html/head.html"];
 
-// req_handler form_parser = [](std::shared_ptr<CR> req, std::shared_ptr<hamza_web::web_response> res) -> int
-// {
-//     try
-//     {
-//         req->form_data = helpers::parse_form_data(req->get_body());
+        document doc;
+        auto head_elm = parse_html_string(head_str)[0];
+        auto header_elm = parse_html_string(header_str)[0];
+        auto body_elm = parse_html_string(body_str)[0];
+        auto footer_elm = parse_html_string(footer_str)[0];
 
-//         return hamza_web::CONTINUE;
-//     }
-//     catch (const std::exception &e)
-//     {
-//         res->set_status(400, "Bad Request");
-//         res->text("Error parsing form data: " + std::string(e.what()));
-//         return hamza_web::EXIT;
-//     }
-// };
-// req_handler create_connection_handler = [](std::shared_ptr<CR> req, std::shared_ptr<hamza_web::web_response> res) -> int
-// {
-//     res->set_status(201, "Created");
-//     std::string data;
-//     for (const auto &[key, value] : req->form_data)
-//     {
-//         data += key + ": " + value + "\n";
-//     }
-//     res->set_body("Connection created:\n" + data);
-//     return hamza_web::EXIT;
-// };
-// using ptr_route = std::shared_ptr<web_route<CR>>;
-// using ptr_router = std::shared_ptr<web_router<CR>>;
+        element projects_elm;
+
+        std::string project_template = cashed_files["html/project.html"];
+
+        auto project_elm = parse_html_string(project_template)[0];
+
+        for (const auto &project : projects)
+        {
+            element tech_stack_container;
+            for (const auto &tech : project.tech_stack)
+            {
+                tech_stack_container.add_child(std::make_shared<element>(element("span", tech, {{"class", "tech-tag"}})));
+            }
+            auto tmep = project_elm->copy();
+            tmep.set_text_params_recursive({{"project_name", project.name},
+                                            {"project_description", project.description},
+                                            {"project_tech_html_string", tech_stack_container.to_string()}});
+            projects_elm.add_child(std::make_shared<element>(tmep));
+        }
+
+        head_elm->set_text_params_recursive(params);
+        header_elm->set_text_params_recursive(params);
+        body_elm->set_text_params_recursive(params);
+        body_elm->set_text_params_recursive({{"projects_html_string", projects_elm.to_string()}});
+        // body_elm->set_text_params_recursive({{"skills_html_string", skills_elm.to_string()}});
+        footer_elm->set_text_params_recursive(params);
+        doc.add_child(head_elm);
+        doc.add_child(header_elm);
+        doc.add_child(body_elm);
+        doc.add_child(footer_elm);
+
+        res->set_status(200, "OK");
+        res->html((doc.to_string()));
+        res->end();
+
+        return hamza_web::EXIT;
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << "Error: " << e.what() << std::endl;
+        res->set_status(500, "Internal Server Error");
+        res->text("Error: " + std::string(e.what()));
+        res->end();
+        return hamza_web::EXIT;
+    }
+};
 
 int main()
 {
@@ -89,17 +145,13 @@ int main()
     {
         web_server<> server("127.0.0.1", 8080);
 
-        // auto index_route = ptr_route(new web_route<CR>("/", methods::GET, {auth, index_handler}));
-        // auto create_connection_route = ptr_route(new web_route<CR>("/create-connection", methods::POST, {auth, form_parser, create_connection_handler}));
+        auto index_route = std::make_shared<web_route<>>("/", methods::GET, std::vector<H>{index_handler});
 
-        // auto router = ptr_router(new web_router<CR>());
+        auto router = std::make_shared<web_router<>>();
+        router->register_route(index_route);
 
-        // router->register_route(index_route);
-        // router->register_route((create_connection_route));
-
-        // server.register_static("static");
-        // server.register_router(router);
-        auto elm = hamza_html_builder::Element("div");
+        server.register_static("static");
+        server.register_router(router);
 
         server.listen();
     }

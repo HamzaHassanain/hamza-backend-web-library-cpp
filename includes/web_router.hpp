@@ -27,7 +27,7 @@ namespace hamza_web
 
         web_router()
         {
-            default_handler = [](std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res) -> int
+            default_handler = []([[maybe_unused]] std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res) -> int
             {
                 res->set_status(404, "Not Found");
                 res->text("404 Not Found");

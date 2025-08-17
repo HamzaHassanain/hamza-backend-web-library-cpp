@@ -74,7 +74,11 @@ endforeach()
 
 # Add subdirectories for each submodule
 foreach(submodule ${REQUIRED_SUBMODULES})
+    # Temporarily suppress warnings for submodules
+    set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")  # Suppress all warnings for submodules
     add_subdirectory(libs/${submodule})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")  # Restore warnings for main project
 endforeach()
 
 add_executable(hamza_web_framework app.cpp ${SRC_FILES})
