@@ -28,13 +28,13 @@ namespace hamza_web
 
                 int pos = 0;
                 int rhs_pos = 0;
-                while (pos < path.length() && rhs_pos < rhs.length())
+                while (pos < static_cast<int>(path.size()) && rhs_pos < static_cast<int>(rhs.size()))
                 {
                     if (path[pos] == ':')
                     {
                         pos = path.find('/', pos);
                         rhs_pos = rhs.find('/', rhs_pos);
-                        if (pos == std::string::npos || rhs_pos == std::string::npos)
+                        if (pos == static_cast<int>(std::string::npos) || rhs_pos == static_cast<int>(std::string::npos))
                             return true;
                     }
                     else if (path[pos] != rhs[rhs_pos])
@@ -44,7 +44,7 @@ namespace hamza_web
                     ++pos;
                     ++rhs_pos;
                 }
-                return pos == path.length() && rhs_pos == rhs.length();
+                return pos == static_cast<int>(path.size()) && rhs_pos == static_cast<int>(rhs.size());
             }
             catch (const std::exception &e)
             {

@@ -4,23 +4,40 @@ project(hamza_web_framework)
 # Find Git package for submodule handling
 find_package(Git QUIET)
 
-# Initialize and update git submodules
+# Initialize and update git submodules to latest versions
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # Update submodules as needed
     option(GIT_SUBMODULE "Check submodules during build" ON)
+    option(GIT_SUBMODULE_UPDATE_LATEST "Update submodules to latest remote commits" ON)
+    
     if(GIT_SUBMODULE)
-        message(STATUS "Submodule update")
+        message(STATUS "Initializing and updating submodules...")
+        
+        # First, initialize submodules if they don't exist
         execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
-        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+                        RESULT_VARIABLE GIT_SUBMOD_INIT_RESULT)
+        if(NOT GIT_SUBMOD_INIT_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_INIT_RESULT}, please checkout submodules")
+        endif()
+        
+        # If enabled, update submodules to latest remote commits
+        if(GIT_SUBMODULE_UPDATE_LATEST)
+            message(STATUS "Updating submodules to latest remote commits...")
+            execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --remote --recursive
+                            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                            RESULT_VARIABLE GIT_SUBMOD_UPDATE_RESULT)
+            if(NOT GIT_SUBMOD_UPDATE_RESULT EQUAL "0")
+                message(WARNING "git submodule update --remote --recursive failed with ${GIT_SUBMOD_UPDATE_RESULT}, continuing with current submodule versions")
+            else()
+                message(STATUS "Submodules updated to latest versions successfully")
+            endif()
         endif()
     endif()
 endif()
 
 # Check if submodules exist
-set(REQUIRED_SUBMODULES "http-server")  # Add more submodules here as needed
+set(REQUIRED_SUBMODULES "http-server" "html-builder")  # Add more submodules here as needed
 foreach(submodule ${REQUIRED_SUBMODULES})
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libs/${submodule}/CMakeLists.txt")
         message(FATAL_ERROR "The ${submodule} submodule was not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
@@ -63,5 +80,5 @@ endforeach()
 add_executable(hamza_web_framework app.cpp ${SRC_FILES})
 
 # Link libraries for each submodule
-set(SUBMODULE_LIBRARIES "http_server")  # Add more library names here as needed
+set(SUBMODULE_LIBRARIES "http_server" "html_builder")  # Add more library names here as needed
 target_link_libraries(hamza_web_framework ${SUBMODULE_LIBRARIES})
