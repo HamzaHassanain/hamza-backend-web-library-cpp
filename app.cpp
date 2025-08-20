@@ -4,7 +4,6 @@
 #include <web_route.hpp>
 #include <web_router.hpp>
 #include <web_exceptions.hpp>
-#include <web_helpers.hpp>
 #include <html-builder/includes/element.hpp>
 #include <html-builder/includes/document.hpp>
 #include <html-builder/includes/document_parser.hpp>
@@ -55,7 +54,7 @@ std::string join(const std::vector<std::string> &vec, const std::string &delimit
     }
     return oss.str();
 }
-H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> int
+H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
 {
     try
     {
@@ -74,7 +73,7 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
                 std::ifstream ifs(file);
                 if (!ifs)
                 {
-                    throw web_internal_server_error_exception("Failed to open " + file);
+                    throw web_general_exception("Failed to open " + file);
                 }
                 std::stringstream buffer;
                 buffer << ifs.rdbuf();
@@ -116,32 +115,32 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
         header_elm->set_text_params_recursive(params);
         body_elm->set_text_params_recursive(params);
         body_elm->set_text_params_recursive({{"projects_html_string", projects_elm.to_string()}});
-        // body_elm->set_text_params_recursive({{"skills_html_string", skills_elm.to_string()}});
         footer_elm->set_text_params_recursive(params);
+
         doc.add_child(head_elm);
         doc.add_child(header_elm);
         doc.add_child(body_elm);
         doc.add_child(footer_elm);
 
         res->set_status(200, "OK");
-        res->html((doc.to_string()));
-        res->end();
-
-        return hamza_web::EXIT;
+        res->send_html((doc.to_string()));
+        return hamza_web::exit_code::EXIT;
     }
     catch (const std::exception &e)
     {
         std::cout << "Error: " << e.what() << std::endl;
         res->set_status(500, "Internal Server Error");
-        res->text("Error: " + std::string(e.what()));
-        res->end();
-        return hamza_web::EXIT;
+        res->send_text("Error: " + std::string(e.what()));
+        return hamza_web::exit_code::ERROR;
     }
 };
-
-H middleware = [](std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> int
+// implement stress handler
+auto stress_handler = [](const auto &req, const auto &res)
 {
-    throw hamza_web::web_unauthorized_exception("Cannot Access Resource, Unauthorized");
+    // Handle stress test requests
+    std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
+    // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
+    return hamza_web::exit_code::EXIT;
 };
 
 int main()
@@ -150,17 +149,19 @@ int main()
     {
         web_server<> server("127.0.0.1", 8080);
 
-        auto index_route = std::make_shared<web_route<>>("/", methods::GET, std::vector<H>{index_handler});
-        auto other_route = std::make_shared<web_route<>>("/other", methods::GET, std::vector<H>{index_handler});
+        auto index_route = std::make_shared<web_route<>>(methods::GET, "/", std::vector<H>{index_handler});
+        auto other_route = std::make_shared<web_route<>>(methods::GET, "/other", std::vector<H>{index_handler});
+
+        auto stress_route = std::make_shared<web_route<>>(methods::POST, "/stress", std::vector<H>{stress_handler});
+        auto stress_route_GET = std::make_shared<web_route<>>(methods::GET, "/stress", std::vector<H>{stress_handler});
 
         auto router = std::make_shared<web_router<>>();
         auto other_router = std::make_shared<web_router<>>();
 
         router->register_route(index_route);
-
+        router->register_route(stress_route);
+        router->register_route(stress_route_GET);
         other_router->register_route(other_route);
-
-        other_router->register_middleware(middleware);
 
         server.register_static("static");
         server.register_router(router);

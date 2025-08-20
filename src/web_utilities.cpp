@@ -1,10 +1,54 @@
 #include <string>
 #include <vector>
-#include <unordered_map>
+#include <map>
+#include <iomanip>
+#include <sstream>
 #include <algorithm>
 #include <web_utilities.hpp>
 namespace hamza_web
 {
+
+    // Helper functions for web-related tasks
+    std::string url_encode(const std::string &value)
+    {
+        std::ostringstream escaped;
+        for (const char &c : value)
+        {
+            if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+            {
+                escaped << c;
+            }
+            else
+            {
+                escaped << '%' << std::uppercase << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+            }
+        }
+        return escaped.str();
+    }
+
+    std::string url_decode(const std::string &value)
+    {
+        std::string decoded;
+        for (size_t i = 0; i < value.length(); ++i)
+        {
+            if (value[i] == '%')
+            {
+                if (i + 2 < value.length())
+                {
+                    std::string hex = value.substr(i + 1, 2);
+                    char decoded_char = static_cast<char>(std::stoi(hex, nullptr, 16));
+                    decoded += decoded_char;
+                    i += 2;
+                }
+            }
+            else
+            {
+                decoded += value[i];
+            }
+        }
+        return decoded;
+    }
+
     const std::vector<std::string> static_extensions = {
         // Web Documents
         "html", "htm", "xhtml", "xml",
@@ -180,5 +224,87 @@ namespace hamza_web
         std::string extension = get_file_extension_from_uri(uri);
         return std::find(static_extensions.begin(), static_extensions.end(), extension) != static_extensions.end();
     }
+    std::string trim(const std::string &str)
+    {
+        size_t first = str.find_first_not_of(" \t\n\r");
+        size_t last = str.find_last_not_of(" \t\n\r");
+        return (first == std::string::npos || last == std::string::npos) ? "" : str.substr(first, last - first + 1);
+    }
+    std::vector<std::pair<std::string, std::string>> get_path_params(const std::string &uri)
+    {
+        std::vector<std::pair<std::string, std::string>> path_params;
+        std::string path = sanitize_path(uri);
+        size_t start = 0;
+        while ((start = path.find(':', start)) != std::string::npos)
+        {
+            size_t end = path.find('/', start);
+            std::string param = path.substr(start + 1, end - start - 1);
+            path_params.emplace_back(param, "");
+            start = end + 1;
+        }
 
-}
+        return path_params;
+    }
+
+    std::string get_path(const std::string &uri)
+    {
+        size_t pos = uri.find('?');
+        if (pos == std::string::npos)
+            return uri;
+        return uri.substr(0, pos);
+    }
+    std::vector<std::pair<std::string, std::string>> get_query_parameters(const std::string &uri)
+    {
+
+        std::vector<std::pair<std::string, std::string>> result;
+        size_t pos = uri.find('?');
+        if (pos == std::string::npos)
+            return result;
+
+        std::string query = uri.substr(pos + 1);
+
+        // split the query string into key-value pairs
+        std::istringstream query_stream(query);
+        std::string pair;
+        while (std::getline(query_stream, pair, '&'))
+        {
+            size_t equal_pos = pair.find('=');
+            if (equal_pos != std::string::npos)
+            {
+                std::string name = hamza_web::trim(pair.substr(0, equal_pos));
+                std::string value = hamza_web::trim(pair.substr(equal_pos + 1));
+                result.emplace_back(name, value);
+            }
+        }
+        return result;
+    }
+
+    bool match_path(const std::string &expression, const std::string &path)
+    {
+
+        if (path == expression)
+        {
+            return true;
+        }
+
+        int expression_pos = 0;
+        int path_pos = 0;
+        while (expression_pos < static_cast<int>(expression.size()) && path_pos < static_cast<int>(path.size()))
+        {
+            if (expression[expression_pos] == ':')
+            {
+                expression_pos = expression.find('/', expression_pos);
+                path_pos = path.find('/', path_pos);
+                if (expression_pos == static_cast<int>(std::string::npos) || path_pos == static_cast<int>(std::string::npos))
+                    return true;
+            }
+            else if (path[path_pos] != expression[expression_pos])
+            {
+                return false;
+            }
+            ++expression_pos;
+            ++path_pos;
+        }
+        return expression_pos == static_cast<int>(expression.size()) && path_pos == static_cast<int>(path.size());
+    }
+};

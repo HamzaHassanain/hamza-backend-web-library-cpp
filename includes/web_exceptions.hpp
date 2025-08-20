@@ -3,75 +3,120 @@
 
 namespace hamza_web
 {
-    class web_general_exception : public hamza::general_socket_exception
+    /**
+     * @brief Web-specific exception class for HTTP-related errors.
+     *
+     * This class extends the base socket_exception to provide web framework-specific
+     * error handling with HTTP status codes and status messages. It is designed to
+     * handle various web-related exceptions that can occur during HTTP request
+     * processing, routing, and response generation.
+     *
+     * The class maintains HTTP status codes and messages to provide proper HTTP
+     * error responses to clients while maintaining detailed error information
+     * for debugging and logging purposes.
+     *
+     * Example usage:
+     * @code
+     * try {
+     *     // Web operation that might fail
+     *     process_web_request();
+     * }
+     * catch (const web_general_exception& e) {
+     *     std::cerr << "Status: " << e.get_status_code() << std::endl;
+     *     std::cerr << "Message: " << e.get_status_message() << std::endl;
+     *     std::cerr << "Details: " << e.what() << std::endl;
+     * }
+     * @endcode
+     */
+    class web_general_exception : public hamza::socket_exception
     {
-        int status_code = 500;
-        std::string status_message = "Internal Server Error";
+        int status_code = 500;                                ///< HTTP status code (default: 500 Internal Server Error)
+        std::string status_message = "Internal Server Error"; ///< HTTP status message
 
     public:
-        explicit web_general_exception(const std::string &message) : general_socket_exception(message) {}
-        explicit web_general_exception(const std::string &message, int status_code, const std::string &status_message) : general_socket_exception(message), status_code(status_code), status_message(status_message) {}
-        std::string type() const noexcept override
+        /**
+         * @brief Construct web exception with error message.
+         * @param message Descriptive error message explaining the web operation failure
+         *
+         * Creates a web exception with default HTTP 500 status code and "Internal Server Error" message.
+         * Uses default type "WEB_EXCEPTION" and function "web_function".
+         */
+        explicit web_general_exception(const std::string &message) : socket_exception(message, "WEB_EXCEPTION", "web_function") {}
+
+        /**
+         * @brief Construct web exception with custom HTTP status.
+         * @param message Descriptive error message explaining the web operation failure
+         * @param status_code HTTP status code for the error response
+         * @param status_message HTTP status message corresponding to the status code
+         *
+         * Creates a web exception with custom HTTP status information for proper client response.
+         */
+        explicit web_general_exception(const std::string &message, int status_code, const std::string &status_message)
+            : socket_exception(message, "", ""), status_code(status_code), status_message(status_message) {}
+
+        /**
+         * @brief Construct web exception with type and function information.
+         * @param message Descriptive error message explaining the web operation failure
+         * @param type Type identifier for the exception
+         * @param function Name of the function that threw the exception
+         *
+         * Creates a web exception with custom type and function information while maintaining
+         * default HTTP 500 status code.
+         */
+        explicit web_general_exception(const std::string &message, const std::string &type, const std::string &function) : socket_exception(message, type, function) {}
+
+        /**
+         * @brief Construct web exception with full customization.
+         * @param message Descriptive error message explaining the web operation failure
+         * @param type Type identifier for the exception
+         * @param function Name of the function that threw the exception
+         * @param status_code HTTP status code for the error response
+         *
+         * Creates a web exception with complete customization of all parameters including
+         * HTTP status code while using default status message.
+         */
+        explicit web_general_exception(const std::string &message, const std::string &type, const std::string &function, int status_code) : socket_exception(message, type, function), status_code(status_code) {}
+
+        /**
+         * @brief Get the HTTP status message.
+         * @return String containing the HTTP status message
+         * @note Thread-safe and returns the status message associated with the HTTP error
+         *
+         * Returns the HTTP status message that describes the error condition in human-readable
+         * format. This is typically used in HTTP response headers and error pages.
+         */
+        std::string get_status_message() const noexcept
         {
-            return "WebGeneralException";
+            return status_message;
         }
 
+        /**
+         * @brief Get the HTTP status code.
+         * @return Integer representing the HTTP status code
+         * @note Thread-safe and returns the numeric HTTP status code
+         *
+         * Returns the HTTP status code that should be sent in the HTTP response.
+         * Common codes include 400 (Bad Request), 404 (Not Found), 500 (Internal Server Error), etc.
+         */
         int get_status_code() const noexcept
         {
             return status_code;
         }
 
-        std::string get_status_message() const noexcept
+        /**
+         * @brief Get the formatted error message string.
+         * @return C-style string containing the formatted error message with HTTP status information
+         * @note Thread-safe and returns a persistent pointer to the formatted message
+         *
+         * Overrides the base class what() method to include HTTP status code and message
+         * in the formatted error output. The format includes status code, status message,
+         * and the underlying socket exception details.
+         */
+        const char *what() const noexcept override
         {
-            return status_message;
-        }
-    };
+            std::string formatted_message = "Web Exception [" + std::to_string(status_code) + " - " + status_message + "]:\n" + socket_exception::what();
 
-    class web_not_found_exception : public web_general_exception
-    {
-    public:
-        explicit web_not_found_exception(const std::string &message) : web_general_exception(message, 404, "Not Found") {}
-        std::string type() const noexcept override
-        {
-            return "WebNotFoundException";
-        }
-    };
-
-    class web_method_not_allowed_exception : public web_general_exception
-    {
-    public:
-        explicit web_method_not_allowed_exception(const std::string &message) : web_general_exception(message, 405, "Method Not Allowed") {}
-        std::string type() const noexcept override
-        {
-            return "WebMethodNotAllowedException";
-        }
-    };
-
-    class web_bad_request_exception : public web_general_exception
-    {
-    public:
-        explicit web_bad_request_exception(const std::string &message) : web_general_exception(message, 400, "Bad Request") {}
-        std::string type() const noexcept override
-        {
-            return "WebBadRequestException";
-        }
-    };
-    class web_unauthorized_exception : public web_general_exception
-    {
-    public:
-        explicit web_unauthorized_exception(const std::string &message) : web_general_exception(message, 401, "Unauthorized") {}
-        std::string type() const noexcept override
-        {
-            return "WebUnauthorizedException";
-        }
-    };
-    class web_internal_server_error_exception : public web_general_exception
-    {
-    public:
-        explicit web_internal_server_error_exception(const std::string &message) : web_general_exception(message, 500, "Internal Server Error") {}
-        std::string type() const noexcept override
-        {
-            return "WebInternalServerErrorException";
+            return formatted_message.c_str();
         }
     };
 
