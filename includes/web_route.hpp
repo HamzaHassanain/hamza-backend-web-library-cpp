@@ -32,27 +32,12 @@ namespace hamza_web
      *
      * @tparam RequestType Type for request objects (must derive from web_request)
      * @tparam ResponseType Type for response objects (must derive from web_response)
-     *
-     * Example usage:
-     * @code
-     * // Create handlers
-     * auto auth_middleware = [](const web_request& req, web_response& res) {
-     *     // Authentication logic
-     * };
-     * auto user_handler = [](const web_request& req, web_response& res) {
-     *     res.send_json("{\"user\": \"data\"}");
-     * };
-     *
-     * // Create route with multiple handlers
-     * std::vector<web_request_handler_t<web_request, web_response>> handlers = {
-     *     auth_middleware, user_handler
-     * };
-     * web_route<> route("GET", "/api/users/:id", handlers);
-     * @endcode
+
      */
     template <typename RequestType = web_request, typename ResponseType = web_response>
     class web_route
     {
+    protected:
         /// HTTP method for this route (GET, POST, PUT, DELETE, etc.)
         std::string method;
 
@@ -109,7 +94,7 @@ namespace hamza_web
          * This includes any parameter placeholders or wildcard patterns that were
          * specified when the route was created.
          */
-        std::string get_path() const
+        virtual std::string get_path() const
         {
             return expression;
         }
@@ -121,28 +106,71 @@ namespace hamza_web
          * Returns the HTTP method that this route is configured to handle.
          * Only requests with matching methods will be processed by this route.
          */
-        std::string get_method() const
+        virtual std::string get_method() const
         {
             return method;
         }
 
         /**
          * @brief Check if this route matches the given method and path.
-         * @param method HTTP method to match against
-         * @param path Request path to match against
+         * @param request Shared pointer to the request object
          * @return True if the route matches, false otherwise
          *
          * Performs route matching by comparing the provided HTTP method and path
-         * against this route's configured method and path expression. The method
-         * comparison is exact, while the path comparison supports pattern matching
-         * including parameters and wildcards.
+         * against this route's configured method and path expression, then sets the path parameters if
+         * existing ones are found.
          *
-         * This method uses the match_path utility function to handle complex
-         * path patterns and parameter extraction during the matching process.
+         * @note This function is called by the web_router class to determine
+         * if a request matches this route.
          */
-        virtual bool match(const std::string &method, const std::string &path) const
+        virtual bool match(std::shared_ptr<RequestType> request) const
         {
-            return this->method == method && match_path(this->expression, path);
+            auto [matched, path_params] = match_path(this->expression, request->get_path());
+            if (matched)
+            {
+                request->set_path_params(path_params);
+            }
+            return this->method == request->get_method() && matched;
+        }
+
+        /**
+         * @brief Match request against routes and execute matching route handlers.
+         * @param request Shared pointer to the request object
+         * @param response Shared pointer to the response object
+         * @return exit_code indicating the result of route processing
+         *
+         * Executes all handlers associated with that route in the order they were registered.
+         *
+         * Route handlers can return:
+         * - EXIT: Stop processing and finalize the response
+         * - ERROR: Indicate an error condition
+         *
+         *@note This function is called by the web_router class if a matching route is found.
+         */
+        virtual exit_code handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
+        {
+            for (const auto &handler : handlers)
+            {
+                auto resp = handler(request, response);
+                if (resp == exit_code::EXIT)
+                {
+                    return exit_code::EXIT;
+                }
+                else if (resp == exit_code::ERROR)
+                {
+                    return exit_code::ERROR;
+                }
+                else if (resp == exit_code::CONTINUE)
+                {
+                    continue;
+                }
+                else
+                {
+                    throw std::runtime_error("Invalid route handler, return value must of  web_hamza::exit_code\n");
+                }
+            }
+
+            return exit_code::EXIT;
         }
 
         /// Default virtual destructor for proper cleanup in inheritance hierarchies

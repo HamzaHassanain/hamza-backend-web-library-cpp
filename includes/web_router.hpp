@@ -19,13 +19,65 @@ namespace hamza_web
     template <typename RequestType, typename ResponseType>
     class web_server; // Forward declaration
 
+    /**
+     * @brief Template class for managing web routes and middleware chains.
+     *
+     * This class provides a comprehensive routing system for web applications by managing
+     * collections of routes and middleware handlers. It implements a request processing
+     * pipeline where middleware executes first (for cross-cutting concerns like authentication,
+     * logging, CORS), followed by route-specific handlers.
+     *
+     * The router supports:
+     * - Middleware chains for cross-cutting concerns
+     * - Route matching based on HTTP method and path patterns
+     * - Handler execution with proper error handling
+     * - Type safety through template parameters
+     * - Move-only semantics for efficient resource management
+     *
+     * The processing flow follows this sequence:
+     * 1. Execute middleware handlers in registration order
+     * 2. If middleware completes successfully, match and execute route handlers
+     * 3. Handle exceptions and convert them to appropriate HTTP responses
+     * 4. Return success/failure status to the web server
+     *
+     * @tparam RequestType Type for request objects (must derive from web_request)
+     * @tparam ResponseType Type for response objects (must derive from web_response)
+
+     */
     template <typename RequestType = web_request, typename ResponseType = web_response>
     class web_router
     {
+    protected:
+        /// Collection of registered routes for handling specific path patterns
         std::vector<std::shared_ptr<web_route<RequestType, ResponseType>>> routes;
+
+        /// Collection of middleware handlers executed before route processing
         std::vector<web_request_handler_t<RequestType, ResponseType>> middlewares;
 
-        exit_code middleware_handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
+        /**
+         * @brief Execute all registered middleware handlers in sequence.
+         * @param request Shared pointer to the request object
+         * @param response Shared pointer to the response object
+         * @return exit_code indicating the result of middleware processing
+         *
+         * Executes middleware handlers in the order they were registered. Middleware
+         * can perform cross-cutting concerns like authentication, logging, request
+         * validation, CORS handling, etc. Each middleware can return:
+         * - CONTINUE: Proceed to the next middleware or route processing
+         * - EXIT: Stop processing and finalize the response
+         * - ERROR: Indicate an error condition
+         *
+         * If any middleware returns EXIT or ERROR, processing stops immediately.
+         * All middleware must return a valid exit_code or a runtime_error is thrown.
+         *
+         * Common middleware use cases:
+         * - Authentication and authorization
+         * - Request logging and metrics
+         * - CORS headers
+         * - Rate limiting
+         * - Request body parsing and validation
+         */
+        virtual exit_code middleware_handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
         {
             for (const auto &middleware : middlewares)
             {
@@ -53,68 +105,105 @@ namespace hamza_web
             return exit_code::CONTINUE;
         }
 
-        exit_code route_handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
-        {
-            for (const auto &route : routes)
-            {
-                if (route->match(request->get_method(), request->get_path()))
-                {
-                    auto &handlers = route->handlers;
-                    for (const auto &handler : handlers)
-                    {
-                        auto resp = handler(request, response);
-                        if (resp == exit_code::EXIT)
-                        {
-                            return exit_code::EXIT;
-                        }
-                        else if (resp == exit_code::ERROR)
-                        {
-                            return exit_code::ERROR;
-                        }
-                        else if (resp == exit_code::CONTINUE)
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            throw std::runtime_error("Invalid route handler, return value must of  web_hamza::exit_code\n");
-                        }
-                    }
-                }
-            }
-
-            return exit_code::CONTINUE;
-        }
-
     public:
+        /// Allow web_server to access protected members
         friend class web_server<RequestType, ResponseType>;
 
+        /**
+         * @brief Default constructor with type safety validation.
+         *
+         * Creates a new web router instance with empty route and middleware collections.
+         * Performs compile-time type checking to ensure RequestType and ResponseType
+         * derive from the required base classes (web_request and web_response respectively).
+         *
+         * The static assertions prevent template instantiation with incompatible types,
+         * ensuring type safety throughout the routing system.
+         */
         web_router()
         {
             static_assert(std::is_base_of<web_request, RequestType>::value, "RequestType must derive from web_request");
             static_assert(std::is_base_of<web_response, ResponseType>::value, "ResponseType must derive from web_response");
         }
 
+        // Copy operations - DELETED for resource safety and unique ownership
+        /**
+         * @brief Copy constructor - DELETED.
+         *
+         * Copy construction is disabled to ensure unique ownership of routes and
+         * middleware handlers, preventing accidental duplication of routing logic.
+         */
         web_router(const web_router &) = delete;
+
+        /**
+         * @brief Copy assignment - DELETED.
+         *
+         * Copy assignment is disabled to maintain unique ownership semantics
+         * and prevent handler duplication.
+         */
         web_router &operator=(const web_router &) = delete;
+
+        // Move operations - ENABLED for ownership transfer
+        /**
+         * @brief Move constructor - DEFAULT.
+         *
+         * Enables efficient transfer of router ownership including all registered
+         * routes and middleware without copying. The source router becomes invalid
+         * after the move.
+         */
         web_router(web_router &&) = default;
+
+        /**
+         * @brief Move assignment - DEFAULT.
+         *
+         * Enables efficient reassignment of routers with proper resource transfer.
+         */
         web_router &operator=(web_router &&) = default;
 
-        bool handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
+        /**
+         * @brief Handle an incoming request through the routing pipeline.
+         * @param request Shared pointer to the request object
+         * @param response Shared pointer to the response object
+         * @return True if request was handled, false if no routes matched
+         *
+         * This is the main entry point for request processing. It orchestrates the
+         * complete request handling pipeline:
+         *
+         * 1. **Middleware Processing**: Executes all registered middleware in order
+         * 2. **Route Matching**: If middleware allows, attempts to match and execute routes
+         * 3. **Exception Handling**: Catches and converts exceptions to HTTP responses
+         * 4. **Status Reporting**: Returns whether the request was successfully handled
+         *
+         * The method provides comprehensive error handling for both web-specific
+         * exceptions (with proper HTTP status codes) and general exceptions
+         * (converted to 500 Internal Server Error).
+         *
+         * Return value semantics:
+         * - true: Request was handled (middleware or route processed it)
+         * - false: No routes matched and middleware didn't handle the request
+         *
+         * Exception handling:
+         * - web_general_exception: Converted to HTTP response with proper status code
+         * - std::exception: Converted to 500 Internal Server Error response
+         *
+         * @note This method is typically called by the web_server for each incoming request
+         */
+        virtual bool handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
         {
             try
             {
-                exit_code middleware_result = middleware_handle_request(request, response);
-
-                if (middleware_result != exit_code::CONTINUE)
+                for (const auto &route : routes)
                 {
-                    return true;
-                }
+                    if (route->match(request))
+                    {
+                        exit_code middleware_result = middleware_handle_request(request, response);
+                        if (middleware_result != exit_code::CONTINUE)
+                        {
+                            return true;
+                        }
 
-                exit_code route_result = route_handle_request(request, response);
-                if (route_result != exit_code::CONTINUE)
-                {
-                    return true;
+                        route->handle_request(request, response);
+                        return true;
+                    }
                 }
 
                 return false;
@@ -132,7 +221,21 @@ namespace hamza_web
                 return true;
             }
         }
-        void register_route(std::shared_ptr<web_route<RequestType, ResponseType>> route)
+
+        /**
+         * @brief Register a new route with the router.
+         * @param route Shared pointer to the route object to register
+         *
+         * Adds a new route to the router's collection. Routes are matched in the
+         * order they are registered, so route ordering can be important for
+         * overlapping patterns. The first matching route will be executed.
+         *
+         * The route must have a non-empty path expression, or an invalid_argument
+         * exception will be thrown.
+         *
+         * @throws std::invalid_argument if the route path is empty
+         */
+        virtual void register_route(std::shared_ptr<web_route<RequestType, ResponseType>> route)
         {
             if (route->get_path().empty())
             {
@@ -141,7 +244,14 @@ namespace hamza_web
             routes.push_back(route);
         }
 
-        void register_middleware(const web_request_handler_t<RequestType, ResponseType> &middleware)
+        /**
+         * @brief Register a middleware handler with the router.
+         * @param middleware Function object that implements middleware logic
+         *
+         * Adds a middleware handler to the router's middleware chain. Middleware
+         * is executed in the order it's registered, before any route handlers.
+         */
+        virtual void register_middleware(const web_request_handler_t<RequestType, ResponseType> &middleware)
         {
             middlewares.push_back(middleware);
         }

@@ -26,24 +26,12 @@ namespace hamza_web
      * The response automatically sets a default 200 OK status and handles response
      * finalization to prevent double-sending, making it safer and more convenient
      * to use than the raw HTTP response interface.
-     *
-     * Example usage:
-     * @code
-     * void handle_api_request(const web_request& req, web_response& res) {
-     *     if (req.get_path() == "/api/users") {
-     *         res.set_status(200, "OK");
-     *         res.send_json("{\"users\": []}");
-     *     } else if (req.get_path() == "/") {
-     *         res.send_html("<html><body><h1>Welcome</h1></body></html>");
-     *     } else {
-     *         res.set_status(404, "Not Found");
-     *         res.send_text("Page not found");
-     *     }
-     * }
+
      * @endcode
      */
     class web_response
     {
+    protected:
         /// Underlying HTTP response object
         hamza_http::http_response response;
 
@@ -58,7 +46,7 @@ namespace hamza_web
          *
          * Ensures that this function is only called once by checking the did_end flag.
          */
-        void end()
+        void end() noexcept
         {
             if (did_end)
                 return;
@@ -110,7 +98,7 @@ namespace hamza_web
          * - 404 "Not Found" for missing resources
          * - 500 "Internal Server Error" for server errors
          */
-        void set_status(int status_code, const std::string &status_message)
+        virtual void set_status(int status_code, const std::string &status_message)
         {
             response.set_status(status_code, status_message);
         }
@@ -122,13 +110,9 @@ namespace hamza_web
          * Convenience method for sending JSON responses. Automatically sets the
          * Content-Type header to "application/json", sets the response body to
          * the provided JSON data, and sends the response.
-         *
-         * Example:
-         * @code
-         * res.send_json("{\"message\": \"Hello, World!\", \"status\": \"success\"}");
-         * @endcode
+
          */
-        void send_json(const std::string &json_data)
+        virtual void send_json(const std::string &json_data)
         {
             response.add_header(hamza_http::HEADER_CONTENT_TYPE, "application/json");
             response.set_body(json_data);
@@ -142,13 +126,9 @@ namespace hamza_web
          * Convenience method for sending HTML responses. Automatically sets the
          * Content-Type header to "text/html", sets the response body to the
          * provided HTML content, and sends the response.
-         *
-         * Example:
-         * @code
-         * res.send_html("<html><body><h1>Welcome to my site!</h1></body></html>");
-         * @endcode
+
          */
-        void send_html(const std::string &html_data)
+        virtual void send_html(const std::string &html_data)
         {
             response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/html");
             response.set_body(html_data);
@@ -162,13 +142,9 @@ namespace hamza_web
          * Convenience method for sending plain text responses. Automatically sets the
          * Content-Type header to "text/plain", sets the response body to the
          * provided text content, and sends the response.
-         *
-         * Example:
-         * @code
-         * res.send_text("Hello, World!");
-         * @endcode
+
          */
-        void send_text(const std::string &text_data)
+        virtual void send_text(const std::string &text_data)
         {
             response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/plain");
             response.set_body(text_data);
@@ -183,14 +159,9 @@ namespace hamza_web
          * Adds a custom HTTP header to the response. Headers are sent before
          * the response body and provide metadata about the response. Multiple
          * headers with the same name can be added.
-         *
-         * Example:
-         * @code
-         * res.add_header("Cache-Control", "no-cache, no-store, must-revalidate");
-         * res.add_header("X-API-Version", "1.0");
-         * @endcode
+
          */
-        void add_header(const std::string &key, const std::string &value)
+        virtual void add_header(const std::string &key, const std::string &value)
         {
             response.add_header(key, value);
         }
@@ -204,7 +175,7 @@ namespace hamza_web
          * are sent after the response body, typically used with chunked
          * transfer encoding to provide metadata calculated during body generation.
          */
-        void add_trailer(const std::string &key, const std::string &value)
+        virtual void add_trailer(const std::string &key, const std::string &value)
         {
             response.add_trailer(key, value);
         }
@@ -224,14 +195,9 @@ namespace hamza_web
          * - HttpOnly - Not accessible via JavaScript
          * - SameSite=Strict|Lax|None - CSRF protection
          * - Max-Age=seconds - Cookie lifetime
-         *
-         * Example:
-         * @code
-         * res.add_cookie("session_id", "abc123", "Path=/; Secure; HttpOnly; SameSite=Strict");
-         * res.add_cookie("theme", "dark", "Path=/; Max-Age=86400");
-         * @endcode
+
          */
-        void add_cookie(const std::string &name, const std::string &cookie, const std::string &attributes = "")
+        virtual void add_cookie(const std::string &name, const std::string &cookie, const std::string &attributes = "")
         {
             std::string value = cookie;
             if (!attributes.empty())
@@ -253,7 +219,7 @@ namespace hamza_web
          * - "image/jpeg", "image/png" for images
          * - "application/pdf" for PDF files
          */
-        void set_content_type(const std::string &content_type)
+        virtual void set_content_type(const std::string &content_type)
         {
             response.add_header(hamza_http::HEADER_CONTENT_TYPE, content_type);
         }
@@ -266,7 +232,7 @@ namespace hamza_web
          * This method only sets the body data; you must call send() or one
          * of the send_* convenience methods to actually transmit the response.
          */
-        void set_body(const std::string &body)
+        virtual void set_body(const std::string &body)
         {
             response.set_body(body);
         }
@@ -288,7 +254,7 @@ namespace hamza_web
          * and send_text() convenience methods.
          * @note You can call this method only once, as subsequent calls will be ignored.
          */
-        void send()
+        virtual void send() noexcept
         {
             if (did_send)
                 return;

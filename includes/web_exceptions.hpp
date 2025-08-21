@@ -14,19 +14,7 @@ namespace hamza_web
      * The class maintains HTTP status codes and messages to provide proper HTTP
      * error responses to clients while maintaining detailed error information
      * for debugging and logging purposes.
-     *
-     * Example usage:
-     * @code
-     * try {
-     *     // Web operation that might fail
-     *     process_web_request();
-     * }
-     * catch (const web_general_exception& e) {
-     *     std::cerr << "Status: " << e.get_status_code() << std::endl;
-     *     std::cerr << "Message: " << e.get_status_message() << std::endl;
-     *     std::cerr << "Details: " << e.what() << std::endl;
-     * }
-     * @endcode
+
      */
     class web_general_exception : public hamza::socket_exception
     {

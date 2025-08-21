@@ -19,24 +19,6 @@ namespace hamza_web
     template <typename RequestType = web_request, typename ResponseType = web_response>
     class web_server
     {
-    private:
-        using ret = std::function<void(std::shared_ptr<hamza::socket_exception>)>;
-        using param = std::function<void(std::shared_ptr<hamza_web::web_general_exception>)>;
-
-        // ret custom_wrap(param &callback)
-        // {
-        //     return [callback = std::move(callback)](std::shared_ptr<hamza::socket_exception> e) -> void
-        //     {
-        //         if (auto web_exc = std::dynamic_pointer_cast<hamza_web::web_general_exception>(e))
-        //         {
-        //             callback(web_exc);
-        //         }
-        //         else
-        //         {
-        //             callback(std::make_shared<hamza_web::web_general_exception>(e->what()));
-        //         }
-        //     };
-        // }
 
     public:
         explicit web_server(const std::string &host, uint16_t port)
@@ -71,8 +53,12 @@ namespace hamza_web
         {
             if (callback)
                 server.set_listen_success_callback(callback);
-            // if (error_callback)
-            //     server.set_error_callback(custom_wrap(error_callback));
+            if (error_callback)
+                server.set_error_callback([error_callback](std::shared_ptr<hamza::socket_exception> e)
+                                          {
+                   std::string what = e ? e->what() : "Unknown error";
+                   auto web_exc = std::make_shared<hamza_web::web_general_exception>(what, "HTTP_SERVER_ERROR", "internal_http_function");
+                   error_callback(web_exc); });
 
             server.listen();
         }
@@ -129,31 +115,41 @@ namespace hamza_web
                 res->send_text("500 Internal Server Error: " + std::string(e.what()));
             }
         }
-        void request_handler([[maybe_unused]] std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res)
+        virtual void request_handler(std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res)
         {
-            bool handled = false;
-            if (is_uri_static(req->get_uri()))
+            try
             {
 
-                server_static(req, res);
-                handled = true;
-            }
-            else
-            {
-                for (const auto &router : routers)
+                bool handled = false;
+                if (is_uri_static(req->get_uri()))
                 {
 
-                    if (router->handle_request(req, res))
+                    server_static(req, res);
+                    handled = true;
+                }
+                else
+                {
+                    for (const auto &router : routers)
                     {
-                        handled = true;
-                        break;
+                        if (router->handle_request(req, res))
+                        {
+                            handled = true;
+                            break;
+                        }
                     }
                 }
-            }
-            if (!handled)
-                handle_unmatched_route(req, res);
+                if (!handled)
+                    handle_unmatched_route(req, res);
 
-            res->send();
+                res->send();
+                res->end();
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "Error handling request: " << e.what() << std::endl;
+                res->set_status(500, "Internal Server Error In Thread");
+                res->send_text("500 Internal Server Error: " + std::string(e.what()));
+            }
             res->end();
         };
         web_request_handler_t<RequestType, ResponseType> handle_unmatched_route = []([[maybe_unused]] std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res) -> exit_code
@@ -173,7 +169,8 @@ namespace hamza_web
 
             try
             {
-                std::thread(&web_server::request_handler, this, web_req_ptr, web_res_ptr).detach();
+                // std::thread(&web_server::request_handler, this, web_req_ptr, web_res_ptr).detach();
+                this->request_handler(web_req_ptr, web_res_ptr);
             }
             catch (const std::exception &e)
             {
@@ -191,14 +188,11 @@ namespace hamza_web
 
         std::function<void(std::shared_ptr<hamza::socket_exception>)> error_callback = [](std::shared_ptr<hamza::socket_exception> e) -> void
         {
-            if (!e)
-            {
-                std::cerr << "Unknown error occurred." << std::endl;
-                return;
-            }
-            // std::cerr << "Error occurred: " << e->get_status_code() << ": " << e->get_status_message() << std::endl;
-            // std::cerr << "Error occurred: " << e->type() << std::endl;
-            std::cerr << "Error occurred: " << e->what() << std::endl;
+            std::string what = e ? e->what() : "Unknown error";
+            std::string type = e ? e->type() : "Unknown type";
+            std::string thrower_function = e ? e->thrower_function() : "Unknown thrower_function";
+
+            std::cerr << "Error: " << what << "\nType: " << type << "\nThrower Function: " << thrower_function << std::endl;
         };
     };
 

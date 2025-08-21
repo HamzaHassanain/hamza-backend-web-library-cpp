@@ -5,36 +5,36 @@ project(hamza_web_framework)
 find_package(Git QUIET)
 
 # Initialize and update git submodules to latest versions
-if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    # Update submodules as needed
-    option(GIT_SUBMODULE "Check submodules during build" ON)
-    option(GIT_SUBMODULE_UPDATE_LATEST "Update submodules to latest remote commits" ON)
+# if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+#     # Update submodules as needed
+#     option(GIT_SUBMODULE "Check submodules during build" ON)
+#     option(GIT_SUBMODULE_UPDATE_LATEST "Update submodules to latest remote commits" ON)
     
-    if(GIT_SUBMODULE)
-        message(STATUS "Initializing and updating submodules...")
+#     if(GIT_SUBMODULE)
+#         message(STATUS "Initializing and updating submodules...")
         
-        # First, initialize submodules if they don't exist
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                        RESULT_VARIABLE GIT_SUBMOD_INIT_RESULT)
-        if(NOT GIT_SUBMOD_INIT_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_INIT_RESULT}, please checkout submodules")
-        endif()
+#         # First, initialize submodules if they don't exist
+#         execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+#                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+#                         RESULT_VARIABLE GIT_SUBMOD_INIT_RESULT)
+#         if(NOT GIT_SUBMOD_INIT_RESULT EQUAL "0")
+#             message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_INIT_RESULT}, please checkout submodules")
+#         endif()
         
-        # If enabled, update submodules to latest remote commits
-        if(GIT_SUBMODULE_UPDATE_LATEST)
-            message(STATUS "Updating submodules to latest remote commits...")
-            execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --remote --recursive
-                            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                            RESULT_VARIABLE GIT_SUBMOD_UPDATE_RESULT)
-            if(NOT GIT_SUBMOD_UPDATE_RESULT EQUAL "0")
-                message(WARNING "git submodule update --remote --recursive failed with ${GIT_SUBMOD_UPDATE_RESULT}, continuing with current submodule versions")
-            else()
-                message(STATUS "Submodules updated to latest versions successfully")
-            endif()
-        endif()
-    endif()
-endif()
+#         # If enabled, update submodules to latest remote commits
+#         if(GIT_SUBMODULE_UPDATE_LATEST)
+#             message(STATUS "Updating submodules to latest remote commits...")
+#             execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --remote --recursive
+#                             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+#                             RESULT_VARIABLE GIT_SUBMOD_UPDATE_RESULT)
+#             if(NOT GIT_SUBMOD_UPDATE_RESULT EQUAL "0")
+#                 message(WARNING "git submodule update --remote --recursive failed with ${GIT_SUBMOD_UPDATE_RESULT}, continuing with current submodule versions")
+#             else()
+#                 message(STATUS "Submodules updated to latest versions successfully")
+#             endif()
+#         endif()
+#     endif()
+# endif()
 
 # Check if submodules exist
 set(REQUIRED_SUBMODULES "http-server" "html-builder")  # Add more submodules here as needed
@@ -51,7 +51,7 @@ if(DEBUG_MODE)
     add_definitions(-DDEBUG_MODE)
 endif()
 
-# add debuging for c++ gcc
+
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
 

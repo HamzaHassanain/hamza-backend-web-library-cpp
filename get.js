@@ -3,9 +3,22 @@
 const fs = require("fs");
 const path = require("path");
 
-const TARGET = "http://127.0.0.1:8080/stress";
-const CLIENTS = 1000;
-const TIMEOUT_MS = 60000; // increased timeout for large uploads
+const TARGETS = [
+  "http://127.0.0.1:8080/stress",
+  "http://127.0.0.1:8080/stress2",
+  "http://127.0.0.1:8080/",
+  "http://127.0.0.1:8080/stress/3",
+  "http://127.0.0.1:8080/stress/4",
+  "http://127.0.0.1:8080/stress/xxx/4",
+  "http://127.0.0.1:8080/stress/x/4",
+  "http://127.0.0.1:8080/stress/../4.css",
+  "http://127.0.0.1:8080/style.css",
+  "http://127.0.0.1:8080/app.js",
+  "http://127.0.0.1:8080/../app.js",
+];
+
+const CLIENTS = 3000;
+const TIMEOUT_MS = 90000; // increased timeout for large uploads
 
 // const payloadPath = path.join(__dirname, "5mb.json");
 // let payload;
@@ -21,14 +34,16 @@ const TIMEOUT_MS = 60000; // increased timeout for large uploads
 //   console.error("Failed to read 1mb.json:", e);
 //   process.exit(1);
 // }
-
+function GetRandomIndex() {
+  return Math.floor(Math.random() * TARGETS.length);
+}
 let count_failed = 0;
 async function makeClient(id) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    const res = await fetch(TARGET, {
+    const res = await fetch(TARGETS[GetRandomIndex()], {
       method: "GET",
       headers: {},
       signal: controller.signal,
@@ -58,10 +73,7 @@ async function main() {
 
   await Promise.all(promises);
   console.log("All clients finished");
+  console.log(`Total failed requests: ${count_failed}`);
 }
 
 main().catch((err) => console.error("Fatal error:", err));
-
-setTimeout(() => {
-  console.log(`Total failed requests: ${count_failed}`);
-}, 10000);

@@ -25,26 +25,14 @@ namespace hamza_web
      * in web applications while maintaining access to all underlying HTTP request
      * data. It provides utility methods for common web development tasks like
      * routing, parameter extraction, and header processing.
-     *
-     * Example usage:
-     * @code
-     * void handle_request(const web_request& req) {
-     *     std::string method = req.get_method();
-     *     std::string path = req.get_path();
-     *     auto params = req.get_query_parameters();
-     *     auto cookies = req.get_cookies();
-     *
-     *     // Process request based on method and path
-     *     if (method == "GET" && path == "/api/users") {
-     *         // Handle user listing
-     *     }
-     * }
-     * @endcode
+
      */
     class web_request
     {
+    protected:
         /// Underlying HTTP request object
         hamza_http::http_request request;
+        std::vector<std::pair<std::string, std::string>> path_params;
 
     public:
         /// Allow web_server to access private members
@@ -83,10 +71,15 @@ namespace hamza_web
          * Example: For URI "/users/123/posts/456", this might return:
          * [{"userId", "123"}, {"postId", "456"}]
          */
-        std::vector<std::pair<std::string, std::string>> get_path_params() const
+        virtual std::vector<std::pair<std::string, std::string>> get_path_params() const
         {
 
-            return hamza_web::get_path_params(request.get_uri());
+            return path_params;
+        }
+
+        virtual void set_path_params(const std::vector<std::pair<std::string, std::string>> &params)
+        {
+            path_params = params;
         }
 
         /**
@@ -97,7 +90,7 @@ namespace hamza_web
          * GET for data retrieval, POST for data submission, PUT for updates,
          * DELETE for removal operations, etc.
          */
-        std::string get_method() const
+        virtual std::string get_method() const
         {
             return request.get_method();
         }
@@ -112,7 +105,7 @@ namespace hamza_web
          *
          * Example: For URI "/api/users?page=1&limit=10", returns "/api/users"
          */
-        std::string get_path() const
+        virtual std::string get_path() const
         {
             return hamza_web::get_path(request.get_uri());
         }
@@ -124,7 +117,7 @@ namespace hamza_web
          * Returns the complete URI as received in the HTTP request, including
          * path, query parameters, and any other URI components.
          */
-        std::string get_uri() const
+        virtual std::string get_uri() const
         {
             return request.get_uri();
         }
@@ -140,7 +133,7 @@ namespace hamza_web
          * Example: For URI "/search?q=example&category=news&page=2", returns:
          * [{"q", "example"}, {"category", "news"}, {"page", "2"}]
          */
-        std::vector<std::pair<std::string, std::string>> get_query_parameters() const
+        virtual std::vector<std::pair<std::string, std::string>> get_query_parameters() const
         {
 
             return hamza_web::get_query_parameters(request.get_uri());
@@ -154,7 +147,7 @@ namespace hamza_web
          * This information can be useful for implementing version-specific
          * features or optimizations.
          */
-        std::string get_version() const
+        virtual std::string get_version() const
         {
             return request.get_version();
         }
@@ -171,7 +164,7 @@ namespace hamza_web
          * Example: For "Accept-Language: en-US,en;q=0.9,fr;q=0.8", returns
          * a vector with the complete value string.
          */
-        std::vector<std::string> get_header(const std::string &name) const
+        virtual std::vector<std::string> get_header(const std::string &name) const
         {
             return request.get_header(name);
         }
@@ -184,7 +177,7 @@ namespace hamza_web
          * name-value pairs. This provides access to the complete header
          * collection for processing or forwarding.
          */
-        std::vector<std::pair<std::string, std::string>> get_headers() const
+        virtual std::vector<std::pair<std::string, std::string>> get_headers() const
         {
             return request.get_headers();
         }
@@ -197,7 +190,7 @@ namespace hamza_web
          * and PUT requests, this typically contains form data, JSON, XML,
          * or other payload formats. For GET requests, the body is usually empty.
          */
-        std::string get_body() const
+        virtual std::string get_body() const
         {
             return request.get_body();
         }
@@ -210,7 +203,7 @@ namespace hamza_web
          * the media type of the request body. Common values include
          * "application/json", "application/x-www-form-urlencoded", "text/plain", etc.
          */
-        std::vector<std::string> get_content_type() const
+        virtual std::vector<std::string> get_content_type() const
         {
             return request.get_header(hamza_http::HEADER_CONTENT_TYPE);
         }
@@ -224,7 +217,7 @@ namespace hamza_web
          * and tracking. The returned values contain the raw cookie strings
          * that may need further parsing.
          */
-        std::vector<std::string> get_cookies() const
+        virtual std::vector<std::string> get_cookies() const
         {
             return request.get_header(hamza_http::HEADER_COOKIE);
         }
@@ -238,7 +231,7 @@ namespace hamza_web
          * The returned values contain the complete authorization strings
          * including the scheme and credentials.
          */
-        std::vector<std::string> get_authorization() const
+        virtual std::vector<std::string> get_authorization() const
         {
             return request.get_header(hamza_http::HEADER_AUTHORIZATION);
         }

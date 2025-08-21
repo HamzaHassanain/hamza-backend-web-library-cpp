@@ -135,39 +135,104 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
     }
 };
 // implement stress handler
-auto stress_handler = [](const auto &req, const auto &res)
+H stress_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
 {
     // Handle stress test requests
-    std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
+    // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
     // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
+    res->send_json("{\"status\": \"success\", \"message\": \"Stress test request handled successfully\"}");
     return hamza_web::exit_code::EXIT;
+};
+// implement stress handler
+H stress_handler2 = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+{
+    // Handle stress test requests
+    // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
+    // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
+    res->send_json("{\"status\": \"success\", \"message\": \"Stress 2222222222222222222222\"}");
+    return hamza_web::exit_code::EXIT;
+};
+
+H stress_handler_id = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+{
+    auto params = req->get_path_params();
+    if (params.empty())
+    {
+        res->set_status(400, "Bad Request");
+        res->send_text("Missing required path parameter: id");
+        return hamza_web::exit_code::ERROR;
+    }
+    auto id = params[0].second; // Assuming the first parameter is the id
+    res->send_json("{\"status\": \"success\", \"message\": \"Stress test id: " + id + "\"}");
+    return hamza_web::exit_code::EXIT;
+};
+
+H stress_handler_id_name = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+{
+    auto params = req->get_path_params();
+    if (params.size() < 2)
+    {
+        res->set_status(400, "Bad Request");
+        res->send_text("Missing required path parameters: id and name");
+        return hamza_web::exit_code::ERROR;
+    }
+    auto id = params[0].second;   // Assuming the first parameter is the id
+    auto name = params[1].second; // Assuming the second parameter is the name
+    std::cerr << "id: " << id << ", name: " << name << std::endl;
+
+    res->send_json("{\"status\": \"success\", \"message\": \"Stress test id: " + id + ", name: " + name + "\"}");
+    return hamza_web::exit_code::EXIT;
+};
+
+std::function<bool()> get_random_01 = []() -> bool
+{
+    return rand() % 2 == 0;
+};
+
+H auth_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+{
+    // Example authentication check
+    // In a real application, you would check headers, tokens, etc.
+    bool authenticated = get_random_01();
+
+    if (!authenticated)
+    {
+        res->set_status(401, "Unauthorized");
+        res->send_text("Unauthorized access");
+        return hamza_web::exit_code::EXIT;
+    }
+
+    return hamza_web::exit_code::CONTINUE; // Continue to the next handler if authenticated
 };
 
 int main()
 {
     try
     {
-        web_server<> server("127.0.0.1", 8080);
+        auto server = std::make_unique<web_server<>>("127.0.0.1", 8080);
 
         auto index_route = std::make_shared<web_route<>>(methods::GET, "/", std::vector<H>{index_handler});
-        auto other_route = std::make_shared<web_route<>>(methods::GET, "/other", std::vector<H>{index_handler});
-
-        auto stress_route = std::make_shared<web_route<>>(methods::POST, "/stress", std::vector<H>{stress_handler});
         auto stress_route_GET = std::make_shared<web_route<>>(methods::GET, "/stress", std::vector<H>{stress_handler});
+        auto stress_route_2 = std::make_shared<web_route<>>(methods::GET, "/stress2", std::vector<H>{stress_handler2});
+        auto stress_with_params = std::make_shared<web_route<>>(methods::GET, "/stress/:id", std::vector<H>{stress_handler_id});
+        auto stress_with_params2 = std::make_shared<web_route<>>(methods::GET, "/stress/:id/:name", std::vector<H>{stress_handler_id_name});
 
         auto router = std::make_shared<web_router<>>();
-        auto other_router = std::make_shared<web_router<>>();
+        auto index_router = std::make_shared<web_router<>>();
 
-        router->register_route(index_route);
-        router->register_route(stress_route);
+        index_router->register_middleware(auth_middleware);
+        index_router->register_route(index_route);
+
         router->register_route(stress_route_GET);
-        other_router->register_route(other_route);
+        router->register_route(stress_route_2);
+        router->register_route(stress_with_params2);
+        router->register_route(stress_with_params);
 
-        server.register_static("static");
-        server.register_router(router);
-        server.register_router(other_router);
+        server->register_static("static");
+        server->register_router(router);
+        server->register_router(index_router);
 
-        server.listen();
+        server->listen();
     }
     catch (const std::exception &e)
     {
