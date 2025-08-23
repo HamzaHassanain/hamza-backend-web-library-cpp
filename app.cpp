@@ -222,7 +222,7 @@ H stress_handler_post = []([[maybe_unused]] std::shared_ptr<web_request> req, st
     // Handle stress test requests
     // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
     // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate some processing delay
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Simulate some processing delay
     // Logger::LogInfo("Received POST request with body size: " + std::to_string(req->get_body().size()));
     res->send_json("{\"status\": \"success\", \"message\": \"Stress test POST with body size: " + std::to_string(req->get_body().size()) + "\"}");
     return hamza_web::exit_code::EXIT;
@@ -248,7 +248,10 @@ int main()
 
     try
     {
-        server = std::make_unique<web_server<>>(12346);
+        // hamza_http::epoll_config::MAX_FILE_DESCRIPTORS = 5;
+        // hamza_http::epoll_config::BACKLOG_SIZE = 128;
+
+        server = std::make_unique<web_server<>>(8000);
         auto index_route = std::make_shared<web_route<>>(methods::GET, "/", std::vector<H>{index_handler});
         auto stress_route_GET = std::make_shared<web_route<>>(methods::GET, "/stress", std::vector<H>{stress_handler});
         auto stress_route_POST = std::make_shared<web_route<>>(methods::POST, "/stress/post", std::vector<H>{stress_handler_post});
@@ -276,7 +279,8 @@ int main()
         server->register_router(router);
         server->register_router(index_router);
 
-        server->listen();
+        server->listen([]()
+                       { std::cout << "Fork You." << std::endl; });
     }
     catch (const std::exception &e)
     {

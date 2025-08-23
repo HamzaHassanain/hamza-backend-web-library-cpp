@@ -6,7 +6,7 @@
 #include <fstream>
 namespace Logger
 {
-    std::string absolute_path_to_logs;
+    extern std::string absolute_path_to_logs;
     extern const std::string INFO_LOGS_PATH;
     extern const std::string ERROR_LOGS_PATH;
     extern const std::string DEBUG_LOGS_PATH;

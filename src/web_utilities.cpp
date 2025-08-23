@@ -271,7 +271,7 @@ namespace hamza_web
     }
 
     /**
-     * @brief Check if a URI points to a static resource by extension.
+     * @brief Check if a URI points to a static resource by extension, ex, ip.com/file.png is considered static
      *
      * @note
      * - Extracts the extension and performs a simple membership check in static_extensions

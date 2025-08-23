@@ -4,17 +4,17 @@ const fs = require("fs");
 const path = require("path");
 
 const TARGETS = [
-  "http://127.0.0.1:12346/stress/post",
-  "http://127.0.0.1:12346/stress2",
-  "http://127.0.0.1:12346/",
-  "http://127.0.0.1:12346/stress/3",
-  "http://127.0.0.1:12346/stress/4",
-  "http://127.0.0.1:12346/stress/xxx/4",
-  "http://127.0.0.1:12346/stress/x/4",
-  "http://127.0.0.1:12346/stress/../4.css",
-  "http://127.0.0.1:12346/style.css",
-  "http://127.0.0.1:12346/app.js",
-  "http://127.0.0.1:12346/../app.js",
+  "http://127.0.0.1:8000/stress/post",
+  "http://127.0.0.1:8000/stress2",
+  "http://127.0.0.1:8000/",
+  "http://127.0.0.1:8000/stress/3",
+  "http://127.0.0.1:8000/stress/4",
+  "http://127.0.0.1:8000/stress/xxx/4",
+  "http://127.0.0.1:8000/stress/x/4",
+  "http://127.0.0.1:8000/stress/../4.css",
+  "http://127.0.0.1:8000/style.css",
+  "http://127.0.0.1:8000/app.js",
+  "http://127.0.0.1:8000/../app.js",
 ];
 const CLIENTS = 10000;
 const TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes in milliseconds
@@ -41,7 +41,7 @@ let count_failed = 0;
 async function makeClient(id) {
   const idx = GetRandomIndex();
   // const idx = 0;
-  const isThePost = TARGETS[idx] === "http://127.0.0.1:12346/stress/post";
+  const isThePost = TARGETS[idx] === "http://127.0.0.1:8000/stress/post";
 
   // Create AbortController for timeout
   const controller = new AbortController();
@@ -67,11 +67,11 @@ async function makeClient(id) {
     clearTimeout(timeout);
 
     const text = await res.text().catch(() => "");
-    // console.log(
-    //   `client ${id} -> Requested ${TARGETS[idx]}, ${res.status} (${
-    //     res.statusText
-    //   }) ${text.slice(0, 120).replace(/\n/g, " ")}`
-    // );
+    console.log(
+      `client ${id} -> Success ${TARGETS[idx]}, ${res.status} (${
+        res.statusText
+      }) ${text.slice(0, 120).replace(/\n/g, " ")}`
+    );
   } catch (err) {
     // Clear timeout in case of error
     clearTimeout(timeout);

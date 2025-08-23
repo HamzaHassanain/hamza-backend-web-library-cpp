@@ -17,7 +17,7 @@ namespace hamza_web
         ERROR = -1
     };
     using http_request_callback_t = std::function<void(hamza_http::http_request &, hamza_http::http_response &)>;
-    using web_listen_success_callback_t = std::function<void()>;
+    using web_listen_callback_t = std::function<void()>;
     using web_error_callback_t = std::function<void(const std::exception &)>;
 
     template <typename T = web_request, typename G = web_response>
