@@ -1,4 +1,6 @@
 #pragma once
+
+#include <logger.hpp>
 #include <thread>
 #include <iostream>
 
@@ -13,19 +15,28 @@
 #include <web_router.hpp>
 #include <web_exceptions.hpp>
 #include <web_utilities.hpp>
+#include <thread_pool.hpp>
 
 namespace hamza_web
 {
-    template <typename RequestType = web_request, typename ResponseType = web_response>
+    template <typename T = web_request, typename G = web_response>
     class web_server
     {
+    protected:
+        uint16_t port;
+        std::string host;
+        hamza_http::http_server server;
+        thread_pool worker_pool;
+
+        std::vector<std::string> static_directories;
+        std::vector<std::shared_ptr<web_router<T, G>>> routers;
 
     public:
-        explicit web_server(const std::string &host, uint16_t port)
-            : host(host), port(port), server(host, port, 0, 500000)
+        explicit web_server(uint16_t port, const std::string &host = "0.0.0.0", size_t thread_pool_size = std::thread::hardware_concurrency(), int milliseconds = 1000)
+            : port(port), host(host), server(port, host, milliseconds), worker_pool(thread_pool_size)
         {
-            static_assert(std::is_base_of<web_request, RequestType>::value, "RequestType must derive from web_request");
-            static_assert(std::is_base_of<web_response, ResponseType>::value, "ResponseType must derive from web_response");
+            static_assert(std::is_base_of<web_request, T>::value, "T must derive from web_request");
+            static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
             set_default_callbacks();
         }
 
@@ -35,7 +46,7 @@ namespace hamza_web
         web_server(web_server &&) = delete;
         web_server &operator=(web_server &&) = delete;
 
-        virtual void register_router(std::shared_ptr<web_router<RequestType, ResponseType>> router)
+        virtual void register_router(std::shared_ptr<web_router<T, G>> router)
         {
             this->routers.push_back(router);
         }
@@ -44,7 +55,7 @@ namespace hamza_web
         {
             static_directories.push_back(directory);
         }
-        virtual void register_unmatched_route_handler(const web_request_handler_t<RequestType, ResponseType> &handler)
+        virtual void register_unmatched_route_handler(const web_request_handler_t<T, G> &handler)
         {
             handle_unmatched_route = handler;
         }
@@ -54,22 +65,18 @@ namespace hamza_web
             if (callback)
                 server.set_listen_success_callback(callback);
             if (error_callback)
-                server.set_error_callback([error_callback](std::shared_ptr<hamza::socket_exception> e)
-                                          {
-                   std::string what = e ? e->what() : "Unknown error";
-                   auto web_exc = std::make_shared<hamza_web::web_general_exception>(what, "HTTP_SERVER_ERROR", "internal_http_function");
-                   error_callback(web_exc); });
+                server.set_error_callback(error_callback);
 
             server.listen();
         }
 
-    protected:
-        std::string host;
-        uint16_t port;
-        std::vector<std::string> static_directories;
-        hamza_http::http_server server;
-        std::vector<std::shared_ptr<web_router<RequestType, ResponseType>>> routers;
+        virtual void stop()
+        {
+            server.stop_server();
+            worker_pool.stop_workers();
+        }
 
+    protected:
         virtual void set_default_callbacks()
         {
             server.set_request_callback(request_callback);
@@ -77,7 +84,7 @@ namespace hamza_web
             server.set_error_callback((error_callback));
         }
 
-        virtual void server_static(std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res)
+        virtual void serve_static(std::shared_ptr<T> req, std::shared_ptr<G> res)
         {
             try
             {
@@ -110,12 +117,12 @@ namespace hamza_web
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Error serving static file: " << e.what() << std::endl;
+                Logger::LogError("Error serving static file: " + std::string(e.what()));
                 res->set_status(500, "Internal Server Error");
                 res->send_text("500 Internal Server Error: " + std::string(e.what()));
             }
         }
-        virtual void request_handler(std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res)
+        virtual void request_handler(std::shared_ptr<T> req, std::shared_ptr<G> res)
         {
             try
             {
@@ -124,7 +131,7 @@ namespace hamza_web
                 if (is_uri_static(req->get_uri()))
                 {
 
-                    server_static(req, res);
+                    serve_static(req, res);
                     handled = true;
                 }
                 else
@@ -146,13 +153,15 @@ namespace hamza_web
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Error handling request: " << e.what() << std::endl;
+                Logger::LogError("Error in request handler thread: " + std::string(e.what()));
                 res->set_status(500, "Internal Server Error In Thread");
                 res->send_text("500 Internal Server Error: " + std::string(e.what()));
             }
             res->end();
         };
-        web_request_handler_t<RequestType, ResponseType> handle_unmatched_route = []([[maybe_unused]] std::shared_ptr<RequestType> req, std::shared_ptr<ResponseType> res) -> exit_code
+        
+        
+        web_request_handler_t<T, G> handle_unmatched_route = []([[maybe_unused]] std::shared_ptr<T> req, std::shared_ptr<G> res) -> exit_code
         {
             res->set_status(404, "Not Found");
             res->send_text("404 Not Found");
@@ -161,20 +170,36 @@ namespace hamza_web
 
         http_request_callback_t request_callback = [this](hamza_http::http_request &request, hamza_http::http_response &response) -> void
         {
-            RequestType web_req(std::move(request));
-            ResponseType web_res(std::move(response));
-
-            auto web_res_ptr = std::make_shared<ResponseType>(std::move(web_res));
-            auto web_req_ptr = std::make_shared<RequestType>(std::move(web_req));
-
+            auto web_req_ptr = std::make_shared<T>(std::move(request));
+            auto web_res_ptr = std::make_shared<G>(std::move(response));
+            if (!web_res_ptr || !web_req_ptr)
+            {
+                Logger::LogError("Failed to create request/response objects");
+                return;
+            }
+            if (unknown_method(web_req_ptr->get_method()))
+            {
+                Logger::LogError("Unknown HTTP method: " + web_req_ptr->get_method());
+                web_res_ptr->set_status(405, "Method Not Allowed");
+                web_res_ptr->send_text("405 Method Not Allowed");
+                web_res_ptr->end();
+                return;
+            }
             try
             {
-                // std::thread(&web_server::request_handler, this, web_req_ptr, web_res_ptr).detach();
-                this->request_handler(web_req_ptr, web_res_ptr);
+                worker_pool.enqueue([this, web_req_ptr, web_res_ptr]()
+                                    { request_handler(web_req_ptr, web_res_ptr); });
+            }
+            catch (const web_general_exception &e)
+            {
+                Logger::LogError("Error in request handler thread: " + std::string(e.what()));
+                web_res_ptr->set_status(400, "Bad Request");
+                web_res_ptr->send_text("400 Bad Request: " + std::string(e.what()));
+                web_res_ptr->end();
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Error handling request: " << e.what() << std::endl;
+                Logger::LogError("Error in request handler thread: " + std::string(e.what()));
                 web_res_ptr->set_status(500, "Internal Server Error");
                 web_res_ptr->send_text("500 Internal Server Error");
                 web_res_ptr->end();
@@ -186,13 +211,11 @@ namespace hamza_web
             std::cout << "Server is listening at " << this->host << ":" << this->port << std::endl;
         };
 
-        std::function<void(std::shared_ptr<hamza::socket_exception>)> error_callback = [](std::shared_ptr<hamza::socket_exception> e) -> void
+        std::function<void(const std::exception &)> error_callback = [](const std::exception &e) -> void
         {
-            std::string what = e ? e->what() : "Unknown error";
-            std::string type = e ? e->type() : "Unknown type";
-            std::string thrower_function = e ? e->thrower_function() : "Unknown thrower_function";
+            std::string what = e.what();
 
-            std::cerr << "Error: " << what << "\nType: " << type << "\nThrower Function: " << thrower_function << std::endl;
+            Logger::LogError("[Socket Exception]: " + what);
         };
     };
 

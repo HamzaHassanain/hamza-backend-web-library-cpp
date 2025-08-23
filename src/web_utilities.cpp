@@ -1,3 +1,4 @@
+#include <logger.hpp>
 #include <string>
 #include <vector>
 #include <map>
@@ -6,7 +7,6 @@
 #include <algorithm>
 #include <web_utilities.hpp>
 #include <iostream>
-
 namespace hamza_web
 {
 
@@ -488,5 +488,11 @@ namespace hamza_web
 
         // All segments matched
         return {true, path_params};
+    }
+
+    bool unknown_method(const std::string &method)
+    {
+        static const std::vector<std::string> known_methods = {methods::GET, methods::POST, methods::PUT, methods::DELETE, methods::PATCH, methods::HEAD, methods::OPTIONS};
+        return std::find(known_methods.begin(), known_methods.end(), method) == known_methods.end();
     }
 };

@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/hamza_web_framework",
-      "args": [],
+      "args": ["&> ${workspaceFolder}/logs/runtime.log"],
       "stopAtEntry": false,
       "cwd": "${fileDirname}",
       "environment": [],

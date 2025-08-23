@@ -13,10 +13,10 @@
 #include <web_methods.hpp>
 namespace hamza_web
 {
-    template <typename RequestType, typename ResponseType>
+    template <typename T, typename G>
     class web_route; // Forward declaration
 
-    template <typename RequestType, typename ResponseType>
+    template <typename T, typename G>
     class web_server; // Forward declaration
 
     /**
@@ -40,19 +40,19 @@ namespace hamza_web
      * 3. Handle exceptions and convert them to appropriate HTTP responses
      * 4. Return success/failure status to the web server
      *
-     * @tparam RequestType Type for request objects (must derive from web_request)
-     * @tparam ResponseType Type for response objects (must derive from web_response)
+     * @tparam T Type for request objects (must derive from web_request)
+     * @tparam G Type for response objects (must derive from web_response)
 
      */
-    template <typename RequestType = web_request, typename ResponseType = web_response>
+    template <typename T = web_request, typename G = web_response>
     class web_router
     {
     protected:
         /// Collection of registered routes for handling specific path patterns
-        std::vector<std::shared_ptr<web_route<RequestType, ResponseType>>> routes;
+        std::vector<std::shared_ptr<web_route<T, G>>> routes;
 
         /// Collection of middleware handlers executed before route processing
-        std::vector<web_request_handler_t<RequestType, ResponseType>> middlewares;
+        std::vector<web_request_handler_t<T, G>> middlewares;
 
         /**
          * @brief Execute all registered middleware handlers in sequence.
@@ -77,7 +77,7 @@ namespace hamza_web
          * - Rate limiting
          * - Request body parsing and validation
          */
-        virtual exit_code middleware_handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
+        virtual exit_code middleware_handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response)
         {
             for (const auto &middleware : middlewares)
             {
@@ -98,7 +98,7 @@ namespace hamza_web
                 }
                 else
                 {
-                    throw std::runtime_error("Invalid middleware, return value must of  web_hamza::exit_code\n");
+                    throw std::runtime_error("Invalid middleware, return value must of  web_hamza_socket::exit_code\n");
                 }
             }
 
@@ -107,13 +107,13 @@ namespace hamza_web
 
     public:
         /// Allow web_server to access protected members
-        friend class web_server<RequestType, ResponseType>;
+        friend class web_server<T, G>;
 
         /**
          * @brief Default constructor with type safety validation.
          *
          * Creates a new web router instance with empty route and middleware collections.
-         * Performs compile-time type checking to ensure RequestType and ResponseType
+         * Performs compile-time type checking to ensure T and G
          * derive from the required base classes (web_request and web_response respectively).
          *
          * The static assertions prevent template instantiation with incompatible types,
@@ -121,8 +121,8 @@ namespace hamza_web
          */
         web_router()
         {
-            static_assert(std::is_base_of<web_request, RequestType>::value, "RequestType must derive from web_request");
-            static_assert(std::is_base_of<web_response, ResponseType>::value, "ResponseType must derive from web_response");
+            static_assert(std::is_base_of<web_request, T>::value, "T must derive from web_request");
+            static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
         }
 
         // Copy operations - DELETED for resource safety and unique ownership
@@ -187,20 +187,20 @@ namespace hamza_web
          *
          * @note This method is typically called by the web_server for each incoming request
          */
-        virtual bool handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
+        virtual bool handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response)
         {
             try
             {
+                exit_code middleware_result = middleware_handle_request(request, response);
+                if (middleware_result != exit_code::CONTINUE)
+                {
+                    return true;
+                }
+                // If middleware allows, try to match routes
                 for (const auto &route : routes)
                 {
                     if (route->match(request))
                     {
-                        exit_code middleware_result = middleware_handle_request(request, response);
-                        if (middleware_result != exit_code::CONTINUE)
-                        {
-                            return true;
-                        }
-
                         route->handle_request(request, response);
                         return true;
                     }
@@ -235,7 +235,7 @@ namespace hamza_web
          *
          * @throws std::invalid_argument if the route path is empty
          */
-        virtual void register_route(std::shared_ptr<web_route<RequestType, ResponseType>> route)
+        virtual void register_route(std::shared_ptr<web_route<T, G>> route)
         {
             if (route->get_path().empty())
             {
@@ -251,7 +251,7 @@ namespace hamza_web
          * Adds a middleware handler to the router's middleware chain. Middleware
          * is executed in the order it's registered, before any route handlers.
          */
-        virtual void register_middleware(const web_request_handler_t<RequestType, ResponseType> &middleware)
+        virtual void register_middleware(const web_request_handler_t<T, G> &middleware)
         {
             middlewares.push_back(middleware);
         }

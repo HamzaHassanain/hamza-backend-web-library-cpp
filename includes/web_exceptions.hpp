@@ -1,5 +1,5 @@
 #pragma once
-#include <http-server/includes/exceptions.hpp>
+#include <http-server/libs/socket-lib/includes/exceptions.hpp>
 
 namespace hamza_web
 {
@@ -16,7 +16,7 @@ namespace hamza_web
      * for debugging and logging purposes.
 
      */
-    class web_general_exception : public hamza::socket_exception
+    class web_general_exception : public hamza_socket::socket_exception
     {
         int status_code = 500;                                ///< HTTP status code (default: 500 Internal Server Error)
         std::string status_message = "Internal Server Error"; ///< HTTP status message

@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <utility>
-
+#include <web_methods.hpp>
 namespace hamza_web
 {
     /**
@@ -127,4 +127,11 @@ namespace hamza_web
      * - Named parameters using leading ':' (matches a single segment)
      */
     std::pair<bool, std::vector<std::pair<std::string, std::string>>> match_path(const std::string &expression, const std::string &rhs);
+
+    /**
+     * @brief Check if an HTTP method is unknown.
+     * @param method HTTP method string (e.g., "GET", "POST")
+     * @return true if the method is unknown, false otherwise
+     */
+    bool unknown_method(const std::string &method);
 }

@@ -2,9 +2,9 @@
 #include <functional>
 #include <memory>
 #include <initializer_list>
+#include <http-server/libs/socket-lib/includes/exceptions.hpp>
 #include <http-server/includes/http_request.hpp>
 #include <http-server/includes/http_response.hpp>
-#include <http-server/includes/exceptions.hpp>
 #include <web_response.hpp>
 #include <web_request.hpp>
 #include <web_exceptions.hpp>
@@ -18,9 +18,9 @@ namespace hamza_web
     };
     using http_request_callback_t = std::function<void(hamza_http::http_request &, hamza_http::http_response &)>;
     using web_listen_success_callback_t = std::function<void()>;
-    using web_error_callback_t = std::function<void(std::shared_ptr<hamza_web::web_general_exception>)>;
+    using web_error_callback_t = std::function<void(const std::exception &)>;
 
-    template <typename RequestType = web_request, typename ResponseType = web_response>
-    using web_request_handler_t = std::function<exit_code(std::shared_ptr<RequestType>, std::shared_ptr<ResponseType>)>;
+    template <typename T = web_request, typename G = web_response>
+    using web_request_handler_t = std::function<exit_code(std::shared_ptr<T>, std::shared_ptr<G>)>;
 
 };

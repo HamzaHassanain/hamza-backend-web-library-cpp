@@ -9,7 +9,7 @@
 
 namespace hamza_web
 {
-    template <typename RequestType, typename ResponseType>
+    template <typename T, typename G>
     class web_router; // Forward declaration
 
     /**
@@ -30,11 +30,11 @@ namespace hamza_web
      * - With Query parameters: "/api/users?id=123"
      * - Multiple handlers for middleware chains
      *
-     * @tparam RequestType Type for request objects (must derive from web_request)
-     * @tparam ResponseType Type for response objects (must derive from web_response)
+     * @tparam T Type for request objects (must derive from web_request)
+     * @tparam G Type for response objects (must derive from web_response)
 
      */
-    template <typename RequestType = web_request, typename ResponseType = web_response>
+    template <typename T = web_request, typename G = web_response>
     class web_route
     {
     protected:
@@ -45,11 +45,11 @@ namespace hamza_web
         std::string expression;
 
         /// Collection of request handlers executed in sequence for this route
-        std::vector<web_request_handler_t<RequestType, ResponseType>> handlers;
+        std::vector<web_request_handler_t<T, G>> handlers;
 
     public:
         /// Allow web_router to access private members
-        friend class web_router<RequestType, ResponseType>;
+        friend class web_router<T, G>;
 
         /**
          * @brief Construct a web route with method, path expression, and handlers.
@@ -61,17 +61,17 @@ namespace hamza_web
          * and path pattern. The handlers are executed in sequence when a request matches
          * this route, allowing for middleware chains and complex request processing.
          *
-         * The constructor performs compile-time type checking to ensure RequestType and
-         * ResponseType derive from the base web_request and web_response classes respectively.
+         * The constructor performs compile-time type checking to ensure T and
+         * G derive from the base web_request and web_response classes respectively.
          * It also validates that at least one handler is provided.
          *
          * @throws std::invalid_argument if no handlers are provided
          */
-        web_route(const std::string &method, const std::string &expression, const std::vector<web_request_handler_t<RequestType, ResponseType>> &handlers)
+        web_route(const std::string &method, const std::string &expression, const std::vector<web_request_handler_t<T, G>> &handlers)
             : method(method), expression(expression), handlers(std::move(handlers))
         {
-            static_assert(std::is_base_of<web_request, RequestType>::value, "RequestType must derive from web_request");
-            static_assert(std::is_base_of<web_response, ResponseType>::value, "ResponseType must derive from web_response");
+            static_assert(std::is_base_of<web_request, T>::value, "T must derive from web_request");
+            static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
             if (this->handlers.size() == 0)
             {
                 throw std::invalid_argument("At least one handler must be provided");
@@ -123,7 +123,7 @@ namespace hamza_web
          * @note This function is called by the web_router class to determine
          * if a request matches this route.
          */
-        virtual bool match(std::shared_ptr<RequestType> request) const
+        virtual bool match(std::shared_ptr<T> request) const
         {
             auto [matched, path_params] = match_path(this->expression, request->get_path());
             if (matched)
@@ -147,7 +147,7 @@ namespace hamza_web
          *
          *@note This function is called by the web_router class if a matching route is found.
          */
-        virtual exit_code handle_request(std::shared_ptr<RequestType> request, std::shared_ptr<ResponseType> response)
+        virtual exit_code handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response)
         {
             for (const auto &handler : handlers)
             {
@@ -166,7 +166,7 @@ namespace hamza_web
                 }
                 else
                 {
-                    throw std::runtime_error("Invalid route handler, return value must of  web_hamza::exit_code\n");
+                    throw std::runtime_error("Invalid route handler, return value must of  web_hamza_socket::exit_code\n");
                 }
             }
 

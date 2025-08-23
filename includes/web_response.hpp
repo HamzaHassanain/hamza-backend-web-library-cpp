@@ -4,10 +4,11 @@
 #include <vector>
 #include <http-server/includes/http_response.hpp>
 #include <http-server/includes/http_consts.hpp>
-
+#include <logger.hpp>
+#include <atomic>
 namespace hamza_web
 {
-    template <typename RequestType, typename ResponseType>
+    template <typename T, typename G>
     class web_server;
 
     /**
@@ -36,10 +37,10 @@ namespace hamza_web
         hamza_http::http_response response;
 
         /// Flag to prevent double-sending of response
-        bool did_end = 0;
+        std::atomic<bool> did_end = false;
 
         /// Flag to prevent double-sending of response
-        bool did_send = 0;
+        std::atomic<bool> did_send = false;
 
         /**
          * @brief Internal method to end connection with the client, must only be called within web_server or it's derived classes.
@@ -48,9 +49,9 @@ namespace hamza_web
          */
         void end() noexcept
         {
-            if (did_end)
+            if (did_end.load())
                 return;
-            did_end = true;
+            did_end.store(true);
             try
             {
 
@@ -58,13 +59,14 @@ namespace hamza_web
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Error ending response: " << e.what() << std::endl;
+                // Log the error using Logger
+                Logger::LogError("Error ending response: " + std::string(e.what()));
             }
         }
 
     public:
         /// Allow web_server to access private members
-        template <typename RequestType, typename ResponseType>
+        template <typename T, typename G>
         friend class web_server;
 
         /**
@@ -256,18 +258,19 @@ namespace hamza_web
          */
         virtual void send() noexcept
         {
-            if (did_send)
+            if (did_send.load())
                 return;
-            did_send = 1;
+
+            did_send.store(true);
             add_header(hamza_http::HEADER_CONNECTION, "close");
+
             try
             {
-
                 response.send();
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Error sending response: " << e.what() << std::endl;
+                Logger::LogError("Error sending response: " + std::string(e.what()));
                 end();
             }
         }

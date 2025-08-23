@@ -10,7 +10,7 @@
 
 namespace hamza_web
 {
-    template <typename RequestType, typename ResponseType>
+    template <typename T, typename G>
     class web_server;
 
     /**
@@ -36,7 +36,7 @@ namespace hamza_web
 
     public:
         /// Allow web_server to access private members
-        template <typename RequestType, typename ResponseType>
+        template <typename T, typename G>
         friend class web_server;
 
         /**

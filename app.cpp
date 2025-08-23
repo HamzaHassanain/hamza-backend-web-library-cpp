@@ -1,4 +1,6 @@
 #include <bits/stdc++.h>
+
+#include <logger.hpp>
 #include <web_types.hpp>
 #include <web_server.hpp>
 #include <web_route.hpp>
@@ -7,22 +9,10 @@
 #include <html-builder/includes/element.hpp>
 #include <html-builder/includes/document.hpp>
 #include <html-builder/includes/document_parser.hpp>
-
+#include <csignal>
 using namespace hamza_web;
 using namespace hamza_html_builder;
 using H = web_request_handler_t<>;
-
-std::map<std::string, std::string> cashed_files;
-std::map<std::string, std::string> params = {
-    {"heroTitle", "Welcome to My Portfolio"},
-    {"heroDescription", "Discover my projects and skills."},
-    {"aboutText", "I'm a passionate developer."},
-    {"aboutExtraText", "I love creating web applications."},
-    {"email", "hamza@example.com"},
-    {"github", "https://github.com/hamza"},
-    {"linkedin", "https://linkedin.com/in/hamza"},
-    {"title", "Hamza's Portfolio"},
-    {"subtitle", "Showcasing My Work"}};
 
 struct Project
 {
@@ -36,6 +26,16 @@ struct Skill
     std::string name;
     std::string category;
 };
+std::map<std::string, std::string> params = {
+    {"heroTitle", "Welcome to My Portfolio"},
+    {"heroDescription", "Discover my projects and skills."},
+    {"aboutText", "I'm a passionate developer."},
+    {"aboutExtraText", "I love creating web applications."},
+    {"email", "hamza@example.com"},
+    {"github", "https://github.com/hamza"},
+    {"linkedin", "https://linkedin.com/in/hamza"},
+    {"title", "Hamza's Portfolio"},
+    {"subtitle", "Showcasing My Work"}};
 
 std::vector<Project> projects = {
     {"Algorithm Visualizer", "Interactive platform for visualizing sorting and graph algorithms.", {"JavaScript", "Canvas API"}},
@@ -58,6 +58,8 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
 {
     try
     {
+        std::map<std::string, std::string> cashed_files;
+
         std::vector<std::string> needed_files = {
             "html/body.html",
             "html/footer.html",
@@ -128,7 +130,7 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
     }
     catch (const std::exception &e)
     {
-        std::cout << "Error: " << e.what() << std::endl;
+        Logger::LogError("Error in index_handler:\n" + std::string(e.what()));
         res->set_status(500, "Internal Server Error");
         res->send_text("Error: " + std::string(e.what()));
         return hamza_web::exit_code::ERROR;
@@ -149,6 +151,7 @@ H stress_handler2 = []([[maybe_unused]] std::shared_ptr<web_request> req, std::s
     // Handle stress test requests
     // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
     // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
+
     res->send_json("{\"status\": \"success\", \"message\": \"Stress 2222222222222222222222\"}");
     return hamza_web::exit_code::EXIT;
 };
@@ -178,8 +181,7 @@ H stress_handler_id_name = []([[maybe_unused]] std::shared_ptr<web_request> req,
     }
     auto id = params[0].second;   // Assuming the first parameter is the id
     auto name = params[1].second; // Assuming the second parameter is the name
-    std::cerr << "id: " << id << ", name: " << name << std::endl;
-
+    // std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate some processing delay
     res->send_json("{\"status\": \"success\", \"message\": \"Stress test id: " + id + ", name: " + name + "\"}");
     return hamza_web::exit_code::EXIT;
 };
@@ -205,20 +207,60 @@ H auth_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::s
     return hamza_web::exit_code::CONTINUE; // Continue to the next handler if authenticated
 };
 
+H logger_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+{
+    // Log request details
+    Logger::LogInfo("Request received: " + req->get_method() + " " + req->get_uri() + " on thread " + std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id())));
+    // You can log more details as needed
+
+    // Continue to the next middleware or route handler
+    return hamza_web::exit_code::CONTINUE;
+};
+
+H stress_handler_post = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+{
+    // Handle stress test requests
+    // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
+    // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate some processing delay
+    // Logger::LogInfo("Received POST request with body size: " + std::to_string(req->get_body().size()));
+    res->send_json("{\"status\": \"success\", \"message\": \"Stress test POST with body size: " + std::to_string(req->get_body().size()) + "\"}");
+    return hamza_web::exit_code::EXIT;
+};
+
+std::unique_ptr<web_server<>> server;
+
+void handle_signal(int signal)
+{
+    Logger::LogInfo("Received signal: " + std::to_string(signal));
+    // Perform cleanup or other actions as needed
+    server->stop();
+
+    std::exit(0); // Exit gracefully
+}
+
 int main()
 {
+
+    std::signal(SIGINT, handle_signal);  // Handle interrupt signal
+    std::signal(SIGTERM, handle_signal); // Handle termination signal
+    std::signal(SIGQUIT, handle_signal); // Handle quit signal
+
     try
     {
-        auto server = std::make_unique<web_server<>>("127.0.0.1", 8080);
-
+        server = std::make_unique<web_server<>>(12346);
         auto index_route = std::make_shared<web_route<>>(methods::GET, "/", std::vector<H>{index_handler});
         auto stress_route_GET = std::make_shared<web_route<>>(methods::GET, "/stress", std::vector<H>{stress_handler});
+        auto stress_route_POST = std::make_shared<web_route<>>(methods::POST, "/stress/post", std::vector<H>{stress_handler_post});
         auto stress_route_2 = std::make_shared<web_route<>>(methods::GET, "/stress2", std::vector<H>{stress_handler2});
         auto stress_with_params = std::make_shared<web_route<>>(methods::GET, "/stress/:id", std::vector<H>{stress_handler_id});
         auto stress_with_params2 = std::make_shared<web_route<>>(methods::GET, "/stress/:id/:name", std::vector<H>{stress_handler_id_name});
 
         auto router = std::make_shared<web_router<>>();
         auto index_router = std::make_shared<web_router<>>();
+
+        index_router->register_middleware(logger_middleware);
+        router->register_middleware(logger_middleware);
 
         index_router->register_middleware(auth_middleware);
         index_router->register_route(index_route);
@@ -228,6 +270,8 @@ int main()
         router->register_route(stress_with_params2);
         router->register_route(stress_with_params);
 
+        router->register_route(stress_route_POST);
+
         server->register_static("static");
         server->register_router(router);
         server->register_router(index_router);
@@ -236,7 +280,7 @@ int main()
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Error: " << e.what() << std::endl;
+        Logger::LogError("Exception in main:\n" + std::string(e.what()));
     }
     return 0;
 }
