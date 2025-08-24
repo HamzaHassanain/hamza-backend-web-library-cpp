@@ -54,7 +54,7 @@ std::string join(const std::vector<std::string> &vec, const std::string &delimit
     }
     return oss.str();
 }
-H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     try
     {
@@ -75,7 +75,7 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
                 std::ifstream ifs(file);
                 if (!ifs)
                 {
-                    throw web_general_exception("Failed to open " + file);
+                    throw web_exception("Failed to open " + file);
                 }
                 std::stringstream buffer;
                 buffer << ifs.rdbuf();
@@ -126,64 +126,64 @@ H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::sha
 
         res->set_status(200, "OK");
         res->send_html((doc.to_string()));
-        return hamza_web::exit_code::EXIT;
+        return exit_code::EXIT;
     }
     catch (const std::exception &e)
     {
-        Logger::LogError("Error in index_handler:\n" + std::string(e.what()));
+        logger::error("Error in index_handler:\n" + std::string(e.what()));
         res->set_status(500, "Internal Server Error");
         res->send_text("Error: " + std::string(e.what()));
-        return hamza_web::exit_code::ERROR;
+        return exit_code::ERROR;
     }
 };
 // implement stress handler
-H stress_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H stress_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     // Handle stress test requests
     // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
     // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
     res->send_json("{\"status\": \"success\", \"message\": \"Stress test request handled successfully\"}");
-    return hamza_web::exit_code::EXIT;
+    return exit_code::EXIT;
 };
 // implement stress handler
-H stress_handler2 = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H stress_handler2 = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     // Handle stress test requests
     // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
     // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
 
     res->send_json("{\"status\": \"success\", \"message\": \"Stress 2222222222222222222222\"}");
-    return hamza_web::exit_code::EXIT;
+    return exit_code::EXIT;
 };
 
-H stress_handler_id = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H stress_handler_id = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     auto params = req->get_path_params();
     if (params.empty())
     {
         res->set_status(400, "Bad Request");
         res->send_text("Missing required path parameter: id");
-        return hamza_web::exit_code::ERROR;
+        return exit_code::ERROR;
     }
     auto id = params[0].second; // Assuming the first parameter is the id
     res->send_json("{\"status\": \"success\", \"message\": \"Stress test id: " + id + "\"}");
-    return hamza_web::exit_code::EXIT;
+    return exit_code::EXIT;
 };
 
-H stress_handler_id_name = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H stress_handler_id_name = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     auto params = req->get_path_params();
     if (params.size() < 2)
     {
         res->set_status(400, "Bad Request");
         res->send_text("Missing required path parameters: id and name");
-        return hamza_web::exit_code::ERROR;
+        return exit_code::ERROR;
     }
     auto id = params[0].second;   // Assuming the first parameter is the id
     auto name = params[1].second; // Assuming the second parameter is the name
     // std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate some processing delay
     res->send_json("{\"status\": \"success\", \"message\": \"Stress test id: " + id + ", name: " + name + "\"}");
-    return hamza_web::exit_code::EXIT;
+    return exit_code::EXIT;
 };
 
 std::function<bool()> get_random_01 = []() -> bool
@@ -191,7 +191,7 @@ std::function<bool()> get_random_01 = []() -> bool
     return rand() % 2 == 0;
 };
 
-H auth_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H auth_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     // Example authentication check
     // In a real application, you would check headers, tokens, etc.
@@ -201,38 +201,38 @@ H auth_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::s
     {
         res->set_status(401, "Unauthorized");
         res->send_text("Unauthorized access");
-        return hamza_web::exit_code::EXIT;
+        return exit_code::EXIT;
     }
 
-    return hamza_web::exit_code::CONTINUE; // Continue to the next handler if authenticated
+    return exit_code::CONTINUE; // Continue to the next handler if authenticated
 };
 
-H logger_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H logger_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     // Log request details
-    Logger::LogInfo("Request received: " + req->get_method() + " " + req->get_uri() + " on thread " + std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id())));
+    logger::info("Request received: " + req->get_method() + " " + req->get_uri() + " on thread " + std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id())));
     // You can log more details as needed
 
     // Continue to the next middleware or route handler
-    return hamza_web::exit_code::CONTINUE;
+    return exit_code::CONTINUE;
 };
 
-H stress_handler_post = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<hamza_web::web_response> res) -> hamza_web::exit_code
+H stress_handler_post = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
 {
     // Handle stress test requests
     // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
     // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Simulate some processing delay
-    // Logger::LogInfo("Received POST request with body size: " + std::to_string(req->get_body().size()));
+    // logger::info("Received POST request with body size: " + std::to_string(req->get_body().size()));
     res->send_json("{\"status\": \"success\", \"message\": \"Stress test POST with body size: " + std::to_string(req->get_body().size()) + "\"}");
-    return hamza_web::exit_code::EXIT;
+    return exit_code::EXIT;
 };
 
 std::unique_ptr<web_server<>> server;
 
 void handle_signal(int signal)
 {
-    Logger::LogInfo("Received signal: " + std::to_string(signal));
+    logger::info("Received signal: " + std::to_string(signal));
     // Perform cleanup or other actions as needed
     server->stop();
 
@@ -248,6 +248,10 @@ int main()
 
     try
     {
+        logger::absolute_path_to_logs = "/home/hamza/Documents/Learnings/Projects/hamza-web-framwork/logs/";
+        logger::enabled_logging = true;
+        logger::clear();
+
         // hamza_http::epoll_config::MAX_FILE_DESCRIPTORS = 5;
         // hamza_http::epoll_config::BACKLOG_SIZE = 128;
 
@@ -284,7 +288,7 @@ int main()
     }
     catch (const std::exception &e)
     {
-        Logger::LogError("Exception in main:\n" + std::string(e.what()));
+        logger::error("Exception in main:\n" + std::string(e.what()));
     }
     return 0;
 }

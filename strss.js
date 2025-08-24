@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const TARGETS = [
-  "http://127.0.0.1:8000/stress/post",
+  // "http://127.0.0.1:8000/stress/post",
   "http://127.0.0.1:8000/stress2",
   "http://127.0.0.1:8000/",
   "http://127.0.0.1:8000/stress/3",

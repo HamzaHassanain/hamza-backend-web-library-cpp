@@ -16,7 +16,7 @@ namespace hamza_web
      * for debugging and logging purposes.
 
      */
-    class web_general_exception : public hamza_socket::socket_exception
+    class web_exception : public hamza_socket::socket_exception
     {
         int status_code = 500;                                ///< HTTP status code (default: 500 Internal Server Error)
         std::string status_message = "Internal Server Error"; ///< HTTP status message
@@ -29,7 +29,7 @@ namespace hamza_web
          * Creates a web exception with default HTTP 500 status code and "Internal Server Error" message.
          * Uses default type "WEB_EXCEPTION" and function "web_function".
          */
-        explicit web_general_exception(const std::string &message) : socket_exception(message, "WEB_EXCEPTION", "web_function") {}
+        explicit web_exception(const std::string &message) : socket_exception(message, "WEB_EXCEPTION", "web_function") {}
 
         /**
          * @brief Construct web exception with custom HTTP status.
@@ -39,7 +39,7 @@ namespace hamza_web
          *
          * Creates a web exception with custom HTTP status information for proper client response.
          */
-        explicit web_general_exception(const std::string &message, int status_code, const std::string &status_message)
+        explicit web_exception(const std::string &message, int status_code, const std::string &status_message)
             : socket_exception(message, "", ""), status_code(status_code), status_message(status_message) {}
 
         /**
@@ -51,7 +51,7 @@ namespace hamza_web
          * Creates a web exception with custom type and function information while maintaining
          * default HTTP 500 status code.
          */
-        explicit web_general_exception(const std::string &message, const std::string &type, const std::string &function) : socket_exception(message, type, function) {}
+        explicit web_exception(const std::string &message, const std::string &type, const std::string &function) : socket_exception(message, type, function) {}
 
         /**
          * @brief Construct web exception with full customization.
@@ -63,7 +63,7 @@ namespace hamza_web
          * Creates a web exception with complete customization of all parameters including
          * HTTP status code while using default status message.
          */
-        explicit web_general_exception(const std::string &message, const std::string &type, const std::string &function, int status_code) : socket_exception(message, type, function), status_code(status_code) {}
+        explicit web_exception(const std::string &message, const std::string &type, const std::string &function, int status_code = 500, std::string status_message = "Internal Server Error") : socket_exception(message, type, function), status_code(status_code), status_message(status_message) {}
 
         /**
          * @brief Get the HTTP status message.

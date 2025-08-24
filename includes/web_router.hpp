@@ -32,7 +32,6 @@ namespace hamza_web
      * - Route matching based on HTTP method and path patterns
      * - Handler execution with proper error handling
      * - Type safety through template parameters
-     * - Move-only semantics for efficient resource management
      *
      * The processing flow follows this sequence:
      * 1. Execute middleware handlers in registration order
@@ -125,40 +124,6 @@ namespace hamza_web
             static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
         }
 
-        // Copy operations - DELETED for resource safety and unique ownership
-        /**
-         * @brief Copy constructor - DELETED.
-         *
-         * Copy construction is disabled to ensure unique ownership of routes and
-         * middleware handlers, preventing accidental duplication of routing logic.
-         */
-        web_router(const web_router &) = delete;
-
-        /**
-         * @brief Copy assignment - DELETED.
-         *
-         * Copy assignment is disabled to maintain unique ownership semantics
-         * and prevent handler duplication.
-         */
-        web_router &operator=(const web_router &) = delete;
-
-        // Move operations - ENABLED for ownership transfer
-        /**
-         * @brief Move constructor - DEFAULT.
-         *
-         * Enables efficient transfer of router ownership including all registered
-         * routes and middleware without copying. The source router becomes invalid
-         * after the move.
-         */
-        web_router(web_router &&) = default;
-
-        /**
-         * @brief Move assignment - DEFAULT.
-         *
-         * Enables efficient reassignment of routers with proper resource transfer.
-         */
-        web_router &operator=(web_router &&) = default;
-
         /**
          * @brief Handle an incoming request through the routing pipeline.
          * @param request Shared pointer to the request object
@@ -182,7 +147,7 @@ namespace hamza_web
          * - false: No routes matched and middleware didn't handle the request
          *
          * Exception handling:
-         * - web_general_exception: Converted to HTTP response with proper status code
+         * - web_exception: Converted to HTTP response with proper status code
          * - std::exception: Converted to 500 Internal Server Error response
          *
          * @note This method is typically called by the web_server for each incoming request
@@ -208,17 +173,16 @@ namespace hamza_web
 
                 return false;
             }
-            catch (const web_general_exception &e)
+            catch (const web_exception &e) // Unhandled exception thrown from middleware/route handler
             {
-                response->set_status(e.get_status_code(), e.get_status_message());
-                response->send_text(e.what());
-                return true;
+                logger::error("Web error in router: " + std::string(e.what()));
+                logger::error("Status code: " + std::to_string(e.get_status_code()) + " Message: " + e.get_status_message());
+                throw;
             }
-            catch (const std::exception &e)
+            catch (const std::exception &e) // Unhandled exception
             {
-                response->set_status(500, "Internal Server Error");
-                response->send_text("500 Internal Server Error: " + std::string(e.what()));
-                return true;
+                logger::error("Unhandled exception in router: " + std::string(e.what()));
+                throw;
             }
         }
 

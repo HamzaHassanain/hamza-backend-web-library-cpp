@@ -50,6 +50,7 @@ namespace hamza_web
         uint16_t port;
         /// Server host/IP address
         std::string host;
+
         /// Thread pool for handling requests concurrently
         thread_pool worker_pool;
 
@@ -68,7 +69,7 @@ namespace hamza_web
         std::function<void(const std::exception &)> error_callback = [](const std::exception &e) -> void
         {
             std::string what = e.what();
-            Logger::LogError("[Socket Exception]: " + what);
+            logger::error("[Socket Exception]: " + what);
         };
 
         std::function<void(HEADER_RECEIVED_PARAMS)> headers_callback = nullptr;
@@ -80,6 +81,8 @@ namespace hamza_web
             res->send_text("404 Not Found");
             return exit_code::EXIT;
         };
+
+        web_unhandled_exception_callback_t<T, G> unhandled_exception_callback = nullptr;
 
     public:
         /**
@@ -128,12 +131,22 @@ namespace hamza_web
         }
         /**
          * @brief Register a callback for when headers are received.
-         *
+         * @note default is no action
          * @param callback
          */
         virtual void register_headers_received_callback(const std::function<void(HEADER_RECEIVED_PARAMS)> &callback)
         {
             headers_callback = callback;
+        }
+
+        /**
+         * @brief Register a callback for unhandled exceptions.
+         * @note if not set, the default server behavior is used
+         * @param callback
+         */
+        virtual void register_unhandled_exception_callback(web_unhandled_exception_callback_t<T, G> callback)
+        {
+            unhandled_exception_callback = callback;
         }
 
         /**
@@ -206,9 +219,14 @@ namespace hamza_web
             }
             catch (const std::exception &e)
             {
-                Logger::LogError("Error serving static file: " + std::string(e.what()));
-                res->set_status(500, "Internal Server Error");
-                res->send_text("500 Internal Server Error: " + std::string(e.what()));
+                logger::error("Error serving static file: " + std::string(e.what()));
+                web_exception exp(
+                    "Error serving static file: " + std::string(e.what()),
+                    "INTERNAL_ERROR",
+                    "serve_static",
+                    500,
+                    "Internal Server Error");
+                on_unhandled_exception(req, res, exp);
             }
         }
         /**
@@ -226,7 +244,6 @@ namespace hamza_web
         {
             try
             {
-
                 bool handled = false;              // check if the route got matched with any of the registered routers
                 if (is_uri_static(req->get_uri())) // if static, serve the static file
                 {
@@ -255,11 +272,20 @@ namespace hamza_web
             }
             catch (const std::exception &e)
             {
-                Logger::LogError("Error in request handler thread: " + std::string(e.what()));
-                res->set_status(500, "Internal Server Error In Thread");
-                res->send_text("500 Internal Server Error: " + std::string(e.what()));
-                res->end();
+                logger::error("Error in request handler thread: " + std::string(e.what()));
+
+                web_exception exp(
+                    "Error in request handler thread: " + std::string(e.what()),
+                    "INTERNAL_ERROR",
+                    "request_handler",
+                    500,
+                    "Internal Server Error");
+
+                on_unhandled_exception(req, res, exp);
             }
+
+            res->send();
+            res->end();
         };
 
         /**
@@ -268,50 +294,62 @@ namespace hamza_web
          * @param response Low-level HTTP response object
          *
          * Converts HTTP objects to web objects and dispatches to worker threads.
+         *
+         * @note Intended to just pass the HTTP request, response to another thread to handle it
          */
         virtual void on_request_received(hamza_http::http_request &request, hamza_http::http_response &response) override
         {
-            auto web_req_ptr = std::make_shared<T>(std::move(request));
-            auto web_res_ptr = std::make_shared<G>(std::move(response));
+            auto req = std::make_shared<T>(std::move(request));
+            auto res = std::make_shared<G>(std::move(response));
 
             // If the pointers somehow was not created
-            if (!web_res_ptr || !web_req_ptr)
+            if (!res || !req)
             {
-                Logger::LogError("Failed to create request/response objects");
+                logger::error("Failed to create request/response objects");
                 return;
             }
 
             // If an invalid HTTP method is received
-            if (unknown_method(web_req_ptr->get_method()))
+            if (unknown_method(req->get_method()))
             {
-                Logger::LogError("Unknown HTTP method: " + web_req_ptr->get_method());
+                logger::error("Unknown HTTP method: " + req->get_method());
 
                 // Send back 405 Method Not Allowed
-                web_res_ptr->set_status(405, "Method Not Allowed");
-                web_res_ptr->send_text("405 Method Not Allowed");
-                web_res_ptr->end();
+                res->set_status(405, "Method Not Allowed");
+                res->send_text("405 Method Not Allowed");
+                res->end();
                 return;
             }
             try
             {
                 // Enqueue the request handler for processing
-                worker_pool.enqueue([this, web_req_ptr, web_res_ptr]()
-                                    { request_handler(web_req_ptr, web_res_ptr); });
+                worker_pool.enqueue([this, req, res]()
+                                    { request_handler(req, res); });
             }
-            catch (const web_general_exception &e) // Unhandled web_general_exception
+            catch (const web_exception &e) // Unhandled web_exception
             {
 
-                Logger::LogError("Error in request handler thread: " + std::string(e.what()));
-                web_res_ptr->set_status(400, "Bad Request");
-                web_res_ptr->send_text("400 Bad Request: " + std::string(e.what()));
-                web_res_ptr->end();
+                logger::error("Error in request handler thread: " + std::string(e.what()));
+
+                on_unhandled_exception(req, res, e);
+
+                res->send();
+                res->end();
             }
             catch (const std::exception &e) // unexpected exception
             {
-                Logger::LogError("Error in request handler thread: " + std::string(e.what()));
-                web_res_ptr->set_status(500, "Internal Server Error");
-                web_res_ptr->send_text("500 Internal Server Error");
-                web_res_ptr->end();
+                logger::error("Error in request handler thread: " + std::string(e.what()));
+
+                web_exception exp(
+                    "Error in request handler thread: " + std::string(e.what()),
+                    "INTERNAL_ERROR",
+                    "request_handler",
+                    500,
+                    "Internal Server Error");
+
+                on_unhandled_exception(req, res, exp);
+                res->send();
+                res->end();
             }
         };
 
@@ -340,6 +378,27 @@ namespace hamza_web
         {
             if (headers_callback)
                 headers_callback(conn, headers, method, uri, version, body);
+        }
+
+        /**
+         * @brief Handle unhandled web exceptions
+         * @note This function is called when an unhandled exception occurs.
+         * @note You can provide a callback via set_unhandled_exception_callback., if no callback set, it will log the error and send a 500 response.
+         * @param req The HTTP request
+         * @param res The HTTP response
+         * @param e The exception that occurred
+         */
+        virtual void on_unhandled_exception(std::shared_ptr<T> req, std::shared_ptr<G> res, const web_exception &e)
+        {
+            if (unhandled_exception_callback)
+            {
+                unhandled_exception_callback(req, res, e);
+                return;
+            }
+            res->set_status(e.get_status_code(), e.get_status_message());
+            res->send_text("Internal Server Error");
+            logger::error("Unhandled Web exception: " + std::string(e.what()));
+            res->end();
         }
     };
 

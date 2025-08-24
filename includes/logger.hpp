@@ -4,22 +4,47 @@
 #include <string>
 #include <mutex>
 #include <fstream>
-namespace Logger
+
+/**
+ * @brief Logger for Web server events and errors.
+ *
+ * This logger provides a simple interface for logging messages related to
+ * the Web server's operation, including request handling, error reporting,
+ * and other important events.
+ */
+
+namespace hamza_web::logger
 {
+
+    /// @brief Absolute path to the log file, You are responsible for the path to be valid
+    /// make sure is ends with /some/path/logs/ or on windows C:\some\path\logs\
+
     extern std::string absolute_path_to_logs;
-    extern const std::string INFO_LOGS_PATH;
-    extern const std::string ERROR_LOGS_PATH;
-    extern const std::string DEBUG_LOGS_PATH;
-    extern const std::string TRACE_LOGS_PATH;
-    extern const std::string FATAL_LOGS_PATH;
+
+    /// @brief Flag to enable or disable logging, default is false
+    extern bool enabled_logging;
     extern std::mutex log_mutex;
 
-    void LogInfo(const std::string &message);
+    /// @brief Log an informational message to a file called "info.log"
+    /// @param message The message to log
+    void info(const std::string &message);
 
-    void LogError(const std::string &message);
+    /// @brief Log an error message to a file called "error.log"
+    /// @param message The message to log
+    void error(const std::string &message);
 
-    void LogDebug(const std::string &message);
-    void LogTrace(const std::string &message);
+    /// @brief Log a debug message to a file called "debug.log"
+    /// @param message The message to log
+    void debug(const std::string &message);
 
-    void LogFatal(const std::string &message);
+    /// @brief Log a trace message to a file called "trace.log"
+    /// @param message The message to log
+    void trace(const std::string &message);
+
+    /// @brief Log a fatal message to a file called "fatal.log"
+    /// @param message The message to log
+    void fatal(const std::string &message);
+
+    /// @brief Clear all log files
+    void clear();
 }

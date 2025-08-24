@@ -3,11 +3,12 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <mutex>
+
 #include <http-server/includes/http_request.hpp>
 #include <http-server/includes/http_consts.hpp>
 #include <web_exceptions.hpp>
 #include <web_utilities.hpp>
-
 namespace hamza_web
 {
     template <typename T, typename G>
@@ -25,14 +26,26 @@ namespace hamza_web
      * in web applications while maintaining access to all underlying HTTP request
      * data. It provides utility methods for common web development tasks like
      * routing, parameter extraction, and header processing.
-
+     *
+     * @note Object Provides get only access to the underlying HTTP request data, EXCEPT for
+     *       the path parameters, which can be modified.
+     * @note It is intended to be passed as pointers between the methods, to ensure proper ownership and lifetime management.
+     * @note Please NEVER Initialize web_request directly, Unless you are overriding the web_servers on_request_received method
      */
     class web_request
     {
     protected:
         /// Underlying HTTP request object
         hamza_http::http_request request;
+
+        /// Path parameters extracted from the request URI, in the form of key-value pairs
+        /// http://localhost/users/:id/posts/:postID
+        /// http://localhost/users/123/posts/456
+        /// vector holds => {"id", "123"}, {"postID", "456"}
         std::vector<std::pair<std::string, std::string>> path_params;
+
+        /// Modify path_params mutex
+        mutable std::mutex path_params_mutex;
 
     public:
         /// Allow web_server to access private members
@@ -77,8 +90,14 @@ namespace hamza_web
             return path_params;
         }
 
+        /**
+         * @brief Set the path params object
+         * @note please only call this method from the web_route class, otherwise you will never know the path parameters
+         * @param params The new path parameters to set
+         */
         virtual void set_path_params(const std::vector<std::pair<std::string, std::string>> &params)
         {
+            std::lock_guard<std::mutex> lock(path_params_mutex);
             path_params = params;
         }
 

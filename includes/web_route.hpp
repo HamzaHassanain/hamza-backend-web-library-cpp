@@ -21,8 +21,7 @@ namespace hamza_web
      * by matching incoming requests against route patterns and executing associated handlers.
      *
      * The class is templated to support custom request and response types while maintaining
-     * type safety through compile-time checks. It supports move semantics for efficient
-     * route management and prevents copying to ensure unique route ownership.
+     * type safety through compile-time checks.
      *
      * Routes can handle complex path patterns including:
      * - Static paths: "/api/users"
@@ -77,14 +76,6 @@ namespace hamza_web
                 throw std::invalid_argument("At least one handler must be provided");
             }
         }
-
-        // Copy operations - DELETED for resource safety and unique ownership
-        web_route(const web_route &) = delete;
-        web_route &operator=(const web_route &) = delete;
-
-        // Move operations - ENABLED for ownership transfer
-        web_route(web_route &&) = default;
-        web_route &operator=(web_route &&) = default;
 
         /**
          * @brief Get the path expression/pattern for this route.
@@ -146,8 +137,9 @@ namespace hamza_web
          * - ERROR: Indicate an error condition
          *
          *@note This function is called by the web_router class if a matching route is found.
+         *@note This is a const member function, meaning it does not modify the state of the web_route instance.
          */
-        virtual exit_code handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response)
+        virtual exit_code handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response) const
         {
             for (const auto &handler : handlers)
             {

@@ -6,6 +6,7 @@
 #include <http-server/includes/http_consts.hpp>
 #include <logger.hpp>
 #include <atomic>
+#include <mutex>
 namespace hamza_web
 {
     template <typename T, typename G>
@@ -28,8 +29,9 @@ namespace hamza_web
      * finalization to prevent double-sending, making it safer and more convenient
      * to use than the raw HTTP response interface.
 
-     * @endcode
-     */
+
+     * @note It is intended to be passed as pointers between the methods, to ensure proper ownership and lifetime management.
+     * @note Please NEVER Initialize web_response directly, Unless you are overriding the web_servers on_request_received method     */
     class web_response
     {
     protected:
@@ -42,6 +44,14 @@ namespace hamza_web
         /// Flag to prevent double-sending of response
         std::atomic<bool> did_send = false;
 
+        /// Mutex for modifying headers
+        mutable std::mutex modify_headers_mutex;
+
+        /// Mutex For sending response
+        mutable std::mutex send_response_mutex;
+
+        /// Mutex For ending response
+        mutable std::mutex end_response_mutex;
         /**
          * @brief Internal method to end connection with the client, must only be called within web_server or it's derived classes.
          *
@@ -49,18 +59,21 @@ namespace hamza_web
          */
         void end() noexcept
         {
-            if (did_end.load())
+            /// Only one thread is guaranteed to end the response,
+            /// exchange works as follows:
+            /// it sets the value to true and returns the old value, so if the old value was true,
+            /// it means another thread has already sent the response
+            if (did_end.exchange(true))
                 return;
-            did_end.store(true);
             try
             {
-
+                std::lock_guard<std::mutex> lock(end_response_mutex);
                 response.end();
             }
             catch (const std::exception &e)
             {
-                // Log the error using Logger
-                Logger::LogError("Error ending response: " + std::string(e.what()));
+                // Log the error using logger
+                logger::error("Error ending response: " + std::string(e.what()));
             }
         }
 
@@ -102,6 +115,7 @@ namespace hamza_web
          */
         virtual void set_status(int status_code, const std::string &status_message)
         {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
             response.set_status(status_code, status_message);
         }
 
@@ -116,8 +130,11 @@ namespace hamza_web
          */
         virtual void send_json(const std::string &json_data)
         {
-            response.add_header(hamza_http::HEADER_CONTENT_TYPE, "application/json");
-            response.set_body(json_data);
+            {
+                std::lock_guard<std::mutex> lock(modify_headers_mutex);
+                response.add_header(hamza_http::HEADER_CONTENT_TYPE, "application/json");
+                response.set_body(json_data);
+            }
             send();
         }
 
@@ -132,8 +149,11 @@ namespace hamza_web
          */
         virtual void send_html(const std::string &html_data)
         {
-            response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/html");
-            response.set_body(html_data);
+            {
+                std::lock_guard<std::mutex> lock(modify_headers_mutex);
+                response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/html");
+                response.set_body(html_data);
+            }
             send();
         }
 
@@ -148,8 +168,11 @@ namespace hamza_web
          */
         virtual void send_text(const std::string &text_data)
         {
-            response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/plain");
-            response.set_body(text_data);
+            {
+                std::lock_guard<std::mutex> lock(modify_headers_mutex);
+                response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/plain");
+                response.set_body(text_data);
+            }
             send();
         }
 
@@ -165,6 +188,7 @@ namespace hamza_web
          */
         virtual void add_header(const std::string &key, const std::string &value)
         {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
             response.add_header(key, value);
         }
 
@@ -179,6 +203,7 @@ namespace hamza_web
          */
         virtual void add_trailer(const std::string &key, const std::string &value)
         {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
             response.add_trailer(key, value);
         }
 
@@ -201,6 +226,7 @@ namespace hamza_web
          */
         virtual void add_cookie(const std::string &name, const std::string &cookie, const std::string &attributes = "")
         {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
             std::string value = cookie;
             if (!attributes.empty())
                 value += "; " + attributes;
@@ -223,6 +249,7 @@ namespace hamza_web
          */
         virtual void set_content_type(const std::string &content_type)
         {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
             response.add_header(hamza_http::HEADER_CONTENT_TYPE, content_type);
         }
 
@@ -236,6 +263,7 @@ namespace hamza_web
          */
         virtual void set_body(const std::string &body)
         {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
             response.set_body(body);
         }
 
@@ -258,19 +286,30 @@ namespace hamza_web
          */
         virtual void send() noexcept
         {
-            if (did_send.load())
+            /// Only one thread is guaranteed to send the response,
+            /// exchange works as follows:
+            /// it sets the value to true and returns the old value, so if the old value was true,
+            /// it means another thread has already sent the response
+            if (did_send.exchange(true))
                 return;
 
-            did_send.store(true);
-            add_header(hamza_http::HEADER_CONNECTION, "close");
+            {
+                /// Get the lock of the modify_headers_mutex, to ensure that another thread hasn't modified the headers
+                std::lock_guard<std::mutex> lock(modify_headers_mutex);
+                if (response.get_header(hamza_http::HEADER_CONNECTION).empty())
+                {
+                    response.add_header(hamza_http::HEADER_CONNECTION, "close");
+                }
+            }
 
             try
             {
+                std::lock_guard<std::mutex> lock(send_response_mutex);
                 response.send();
             }
             catch (const std::exception &e)
             {
-                Logger::LogError("Error sending response: " + std::string(e.what()));
+                logger::error("Error sending response: " + std::string(e.what()));
                 end();
             }
         }

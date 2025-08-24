@@ -21,6 +21,9 @@ namespace hamza_web
     using web_error_callback_t = std::function<void(const std::exception &)>;
 
     template <typename T = web_request, typename G = web_response>
+    using web_unhandled_exception_callback_t = std::function<void(std::shared_ptr<T>, std::shared_ptr<G>, const web_exception &)>;
+
+    template <typename T = web_request, typename G = web_response>
     using web_request_handler_t = std::function<exit_code(std::shared_ptr<T>, std::shared_ptr<G>)>;
 
 };
