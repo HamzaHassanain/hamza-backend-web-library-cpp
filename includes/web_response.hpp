@@ -134,6 +134,7 @@ namespace hamza_web
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
                 response.add_header(hamza_http::HEADER_CONTENT_TYPE, "application/json");
                 response.set_body(json_data);
+                response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(json_data.size()));
             }
             send();
         }
@@ -153,6 +154,7 @@ namespace hamza_web
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
                 response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/html");
                 response.set_body(html_data);
+                response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(html_data.size()));
             }
             send();
         }
@@ -172,6 +174,7 @@ namespace hamza_web
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
                 response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/plain");
                 response.set_body(text_data);
+                response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(text_data.size()));
             }
             send();
         }
@@ -299,6 +302,10 @@ namespace hamza_web
                 if (response.get_header(hamza_http::HEADER_CONNECTION).empty())
                 {
                     response.add_header(hamza_http::HEADER_CONNECTION, "close");
+                }
+                if (response.get_header(hamza_http::HEADER_CONTENT_LENGTH).empty())
+                {
+                    response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(response.get_body().size()));
                 }
             }
 

@@ -173,7 +173,7 @@ namespace hamza_web
 
                 return false;
             }
-            catch (const web_exception &e) // Unhandled exception thrown from middleware/route handler
+            catch (web_exception &e) // Unhandled exception thrown from middleware/route handler
             {
                 logger::error("Web error in router: " + std::string(e.what()));
                 logger::error("Status code: " + std::to_string(e.get_status_code()) + " Message: " + e.get_status_message());

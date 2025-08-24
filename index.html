@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CRUD API Server</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      h2 {
+        color: #555;
+        margin-top: 30px;
+      }
+      code {
+        background-color: #f5f5f5;
+        padding: 2px 5px;
+        border-radius: 3px;
+      }
+      pre {
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+      }
+      .endpoint {
+        margin-bottom: 20px;
+      }
+      .method {
+        font-weight: bold;
+        margin-right: 10px;
+      }
+      .get {
+        color: #2196f3;
+      }
+      .post {
+        color: #4caf50;
+      }
+      .put {
+        color: #ff9800;
+      }
+      .delete {
+        color: #f44336;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CRUD API Server</h1>
+    <p>
+      Welcome to the Items CRUD API Server! Use the following endpoints to
+      interact with items:
+    </p>
+
+    <h2>API Endpoints</h2>
+
+    <div class="endpoint">
+      <div><span class="method get">GET</span> <code>/api/items</code></div>
+      <p>Get all items</p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method get">GET</span> <code>/api/items/:id</code></div>
+      <p>Get a specific item by ID</p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method post">POST</span> <code>/api/items</code></div>
+      <p>Create a new item</p>
+      <pre>
+{
+  "name": "Item name",
+  "description": "Item description",
+  "price": 19.99
+}
+                                    </pre
+      >
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method put">PUT</span> <code>/api/items/:id</code></div>
+      <p>Update an existing item</p>
+      <pre>
+{
+  "name": "Updated name",
+  "description": "Updated description",
+  "price": 29.99
+}
+                                    </pre
+      >
+    </div>
+
+    <div class="endpoint">
+      <div>
+        <span class="method delete">DELETE</span> <code>/api/items/:id</code>
+      </div>
+      <p>Delete an item</p>
+    </div>
+  </body>
+</html>

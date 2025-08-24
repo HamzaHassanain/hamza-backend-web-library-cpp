@@ -5,6 +5,8 @@ project(hamza_web_framework)
 find_package(Git QUIET)
 
 # Initialize and update git submodules to latest versions
+
+
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # Update submodules as needed
     option(GIT_SUBMODULE "Check submodules during build" ON)
@@ -41,12 +43,48 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 # Check if submodules exist
-set(REQUIRED_SUBMODULES "http-server" "html-builder")  # Add more submodules here as needed
+set(REQUIRED_SUBMODULES "http-server" "html-builder" "json")  # Add more submodules here as needed
 foreach(submodule ${REQUIRED_SUBMODULES})
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libs/${submodule}/CMakeLists.txt")
         message(FATAL_ERROR "The ${submodule} submodule was not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
     endif()
 endforeach()
+
+
+
+
+# Function to read .env file and set variables
+function(load_env_file env_file)
+    if(EXISTS ${env_file})
+        file(READ ${env_file} ENV_CONTENT)
+        string(REPLACE "\n" ";" ENV_LINES ${ENV_CONTENT})
+        
+        foreach(line ${ENV_LINES})
+            # Skip empty lines and comments
+            if(line AND NOT line MATCHES "^#")
+                string(FIND ${line} "=" eq_pos)
+                if(eq_pos GREATER -1)
+                    string(SUBSTRING ${line} 0 ${eq_pos} var_name)
+                    math(EXPR val_start "${eq_pos} + 1")
+                    string(SUBSTRING ${line} ${val_start} -1 var_value)
+                    
+                    # Remove any whitespace
+                    string(STRIP ${var_name} var_name)
+                    string(STRIP ${var_value} var_value)
+                    
+                    # Set the variable in parent scope
+                    set(${var_name} ${var_value} PARENT_SCOPE)
+                    message(STATUS "Loaded env variable: ${var_name}=${var_value}")
+                endif()
+            endif()
+        endforeach()
+    else()
+        message(WARNING ".env file not found at ${env_file}")
+    endif()
+endfunction()
+
+# Load environment variables from .env file
+load_env_file(${CMAKE_SOURCE_DIR}/.env)
 
 # define a variable called debug, that I can acess in a c++ code, to enable debugging
 set(DEBUG_MODE ON CACHE BOOL "Enable Debug Mode") 
@@ -57,7 +95,11 @@ endif()
 
 # add debuging for c++ gcc
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
+if(WEB_LOCAL_TEST AND WEB_LOCAL_TEST STREQUAL "1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
 
 
 file(GLOB SRC_FILES src/*.cpp)
@@ -68,6 +110,8 @@ set(CMAKE_CXX_STANDARD 17)
 # Add include directories for all libraries
 include_directories(${CMAKE_SOURCE_DIR}/includes)
 include_directories(${CMAKE_SOURCE_DIR}/libs)
+include_directories(${CMAKE_SOURCE_DIR}/libs/http-server/libs/socket-lib/includes)
+include_directories(${CMAKE_SOURCE_DIR}/libs/http-server/libs/)
 
 # Add include directories for each submodule
 foreach(submodule ${REQUIRED_SUBMODULES})
@@ -76,9 +120,6 @@ foreach(submodule ${REQUIRED_SUBMODULES})
     endif()
 endforeach()
 
-# Add include directories for nested submodules (socket-lib)
-include_directories(${CMAKE_SOURCE_DIR}/libs/http-server/libs/socket-lib/includes)
-include_directories(${CMAKE_SOURCE_DIR}/libs/http-server/libs/)
 
 # Add subdirectories for each submodule
 foreach(submodule ${REQUIRED_SUBMODULES})
@@ -89,12 +130,17 @@ foreach(submodule ${REQUIRED_SUBMODULES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")  # Restore warnings for main project
 endforeach()
 
-add_executable(hamza_web_framework app.cpp ${SRC_FILES})
+if(WEB_LOCAL_TEST AND WEB_LOCAL_TEST STREQUAL "1")
+    add_executable(  hamza_web_framework app.cpp ${SRC_FILES}   )
+else()
+    add_library(hamza_web_framework STATIC ${SRC_FILES})
+endif()
+
 
 # Find and link pthread
 find_package(Threads REQUIRED)
 target_link_libraries(hamza_web_framework Threads::Threads)
 
 # Link libraries for each submodule
-set(SUBMODULE_LIBRARIES "http_server" "html_builder")  # Add more library names here as needed
+set(SUBMODULE_LIBRARIES "http_server" "html_builder" "json_parser")  # Add more library names here as needed
 target_link_libraries(hamza_web_framework ${SUBMODULE_LIBRARIES})

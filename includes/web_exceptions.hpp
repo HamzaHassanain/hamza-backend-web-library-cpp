@@ -100,11 +100,11 @@ namespace hamza_web
          * in the formatted error output. The format includes status code, status message,
          * and the underlying socket exception details.
          */
-        const char *what() const noexcept override
+        std::string what() noexcept override
         {
-            std::string formatted_message = "Web Exception [" + std::to_string(status_code) + " - " + status_message + "]:\n" + socket_exception::what();
+            std::string formatted_message = "Web Exception [" + std::to_string(status_code) + " - " + status_message + "]: " + socket_exception::what();
 
-            return formatted_message.c_str();
+            return formatted_message;
         }
     };
 

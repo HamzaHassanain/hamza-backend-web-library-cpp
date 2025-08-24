@@ -221,7 +221,7 @@ namespace hamza_web
             {
                 logger::error("Error serving static file: " + std::string(e.what()));
                 web_exception exp(
-                    "Error serving static file: " + std::string(e.what()),
+                    "Error serving static file",
                     "INTERNAL_ERROR",
                     "serve_static",
                     500,
@@ -275,7 +275,7 @@ namespace hamza_web
                 logger::error("Error in request handler thread: " + std::string(e.what()));
 
                 web_exception exp(
-                    "Error in request handler thread: " + std::string(e.what()),
+                    "Error in request handler thread",
                     "INTERNAL_ERROR",
                     "request_handler",
                     500,
@@ -326,7 +326,7 @@ namespace hamza_web
                 worker_pool.enqueue([this, req, res]()
                                     { request_handler(req, res); });
             }
-            catch (const web_exception &e) // Unhandled web_exception
+            catch (web_exception &e) // Unhandled web_exception
             {
 
                 logger::error("Error in request handler thread: " + std::string(e.what()));
@@ -341,7 +341,7 @@ namespace hamza_web
                 logger::error("Error in request handler thread: " + std::string(e.what()));
 
                 web_exception exp(
-                    "Error in request handler thread: " + std::string(e.what()),
+                    "Error in request handler thread",
                     "INTERNAL_ERROR",
                     "request_handler",
                     500,
@@ -388,7 +388,7 @@ namespace hamza_web
          * @param res The HTTP response
          * @param e The exception that occurred
          */
-        virtual void on_unhandled_exception(std::shared_ptr<T> req, std::shared_ptr<G> res, const web_exception &e)
+        virtual void on_unhandled_exception(std::shared_ptr<T> req, std::shared_ptr<G> res, web_exception &e)
         {
             if (unhandled_exception_callback)
             {

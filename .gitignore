@@ -144,3 +144,6 @@ Thumbs.db
 ./html
 ./logs
 ./static
+.env
+
+test/node_modules/

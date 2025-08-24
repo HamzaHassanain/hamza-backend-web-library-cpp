@@ -1,0 +1,16 @@
+{
+  "name": "hamza-web-framework-stress-test",
+  "version": "1.0.0",
+  "description": "Stress test for Hamza Web Framework CRUD API",
+  "main": "stress_test_app.js",
+  "scripts": {
+    "test": "node stress_test_app.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "cli-progress": "^3.11.2",
+    "colors": "^1.4.0"
+  },
+  "author": "Hamza Hassanain",
+  "license": "MIT"
+}

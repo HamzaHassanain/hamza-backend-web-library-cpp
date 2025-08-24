@@ -4,3 +4,7 @@
 [submodule "libs/html-builder"]
 	path = libs/html-builder
 	url = git@github.com:HamzaHassanain/hamza-html-builder.git
+
+[submodule "libs/json"]
+	path = libs/json
+	url = https://github.com/HamzaHassanain/hamza-json-parser.git

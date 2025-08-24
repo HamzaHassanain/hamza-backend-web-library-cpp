@@ -1,294 +1,363 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <memory>
+#include <map>
+#include <mutex>
+#include <fstream>
+#include <sstream>
 
-#include <logger.hpp>
-#include <web_types.hpp>
+#include <json_parser.hpp>
+#include <JSON_OBJECT.hpp>
+#include <JSON_ARRAY.hpp>
+#include <JSON_STRING.hpp>
+#include <JSON_NUMBER.hpp>
+#include <JSON_BOOLEAN.hpp>
+
 #include <web_server.hpp>
-#include <web_route.hpp>
 #include <web_router.hpp>
+#include <web_route.hpp>
+#include <web_request.hpp>
+#include <web_response.hpp>
+#include <web_methods.hpp>
+#include <web_utilities.hpp>
 #include <web_exceptions.hpp>
-#include <html-builder/includes/element.hpp>
-#include <html-builder/includes/document.hpp>
-#include <html-builder/includes/document_parser.hpp>
-#include <csignal>
-using namespace hamza_web;
-using namespace hamza_html_builder;
-using H = web_request_handler_t<>;
 
-struct Project
+using hamza_web::methods::DELETE;
+using hamza_web::methods::GET;
+using hamza_web::methods::POST;
+using hamza_web::methods::PUT;
+
+#include "ItemStore.hpp"
+
+// Helper to get ID from path parameters
+int get_id_from_request(const std::shared_ptr<hamza_web::web_request> &req)
 {
-    std::string name;
-    std::string description;
-    std::vector<std::string> tech_stack;
-};
-
-struct Skill
-{
-    std::string name;
-    std::string category;
-};
-std::map<std::string, std::string> params = {
-    {"heroTitle", "Welcome to My Portfolio"},
-    {"heroDescription", "Discover my projects and skills."},
-    {"aboutText", "I'm a passionate developer."},
-    {"aboutExtraText", "I love creating web applications."},
-    {"email", "hamza@example.com"},
-    {"github", "https://github.com/hamza"},
-    {"linkedin", "https://linkedin.com/in/hamza"},
-    {"title", "Hamza's Portfolio"},
-    {"subtitle", "Showcasing My Work"}};
-
-std::vector<Project> projects = {
-    {"Algorithm Visualizer", "Interactive platform for visualizing sorting and graph algorithms.", {"JavaScript", "Canvas API"}},
-    {"Portfolio Website", "My personal portfolio showcasing my work.", {"HTML", "CSS", "JavaScript"}},
-    {"Chat Application", "Real-time chat application with WebSocket support.", {"Node.js", "WebSocket"}},
-};
-
-std::string join(const std::vector<std::string> &vec, const std::string &delimiter)
-{
-    std::ostringstream oss;
-    for (size_t i = 0; i < vec.size(); ++i)
+    auto params = req->get_path_params();
+    for (const auto &[key, value] : params)
     {
-        oss << vec[i];
-        if (i < vec.size() - 1)
-            oss << delimiter;
+        if (key == "id")
+        {
+            try
+            {
+                return std::stoi(value);
+            }
+            catch (const std::exception &e)
+            {
+                throw hamza_web::web_exception(
+                    "Invalid ID parameter: " + value,
+                    "BAD_REQUEST",
+                    "get_id_from_request",
+                    400,
+                    "Bad Request");
+            }
+        }
     }
-    return oss.str();
+    throw hamza_web::web_exception(
+        "ID parameter missing",
+        "BAD_REQUEST",
+        "get_id_from_request",
+        400,
+        "Bad Request");
 }
-H index_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
+
+hamza_web::exit_code delete_item_handler(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
 {
     try
     {
-        std::map<std::string, std::string> cashed_files;
+        int id = get_id_from_request(req);
+        get_item_store().remove(id);
 
-        std::vector<std::string> needed_files = {
-            "html/body.html",
-            "html/footer.html",
-            "html/header.html",
-            "html/head.html",
-            "html/project.html",
-        };
-        for (const auto &file : needed_files)
+        // For HTTP 204 No Content:
+        // 1. Set the status code
+        // 2. DO NOT set Content-Type
+        // 3. DO NOT set a body (even empty string)
+        res->set_status(204, "No Content");
+
+        // That's it! Don't add any content for 204 responses
+        return hamza_web::exit_code::EXIT;
+    }
+    catch (hamza_web::web_exception &e)
+    {
+        res->set_status(e.get_status_code(), e.get_status_message());
+        res->send_json("{\"error\": \"" + std::string("Item Not Found") + "\"}");
+        return hamza_web::exit_code::EXIT;
+    }
+    catch (const std::exception &e)
+    {
+        res->set_status(500, "Internal Server Error");
+        res->send_json("{\"error\": \"Failed to delete item\"}");
+        return hamza_web::exit_code::EXIT;
+    }
+}
+
+hamza_web::exit_code CORS(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
+{
+    return hamza_web::exit_code::CONTINUE;
+}
+hamza_web::exit_code get_all_items_handler(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
+{
+    try
+    {
+        auto items = get_item_store().get_all();
+
+        // Build JSON array response
+        std::stringstream ss;
+        ss << "[";
+        for (size_t i = 0; i < items.size(); ++i)
         {
-            std::string &content = cashed_files[file];
-            if (content.empty())
+            ss << items[i].to_json();
+            if (i < items.size() - 1)
             {
-                std::ifstream ifs(file);
-                if (!ifs)
-                {
-                    throw web_exception("Failed to open " + file);
-                }
-                std::stringstream buffer;
-                buffer << ifs.rdbuf();
-                content = buffer.str();
+                ss << ",";
             }
         }
-        auto &body_str = cashed_files["html/body.html"];
-        auto &footer_str = cashed_files["html/footer.html"];
-        auto &header_str = cashed_files["html/header.html"];
-        auto &head_str = cashed_files["html/head.html"];
-
-        document doc;
-        auto head_elm = parse_html_string(head_str)[0];
-        auto header_elm = parse_html_string(header_str)[0];
-        auto body_elm = parse_html_string(body_str)[0];
-        auto footer_elm = parse_html_string(footer_str)[0];
-
-        element projects_elm;
-
-        std::string project_template = cashed_files["html/project.html"];
-
-        auto project_elm = parse_html_string(project_template)[0];
-
-        for (const auto &project : projects)
-        {
-            element tech_stack_container;
-            for (const auto &tech : project.tech_stack)
-            {
-                tech_stack_container.add_child(std::make_shared<element>(element("span", tech, {{"class", "tech-tag"}})));
-            }
-            auto tmep = project_elm->copy();
-            tmep.set_text_params_recursive({{"project_name", project.name},
-                                            {"project_description", project.description},
-                                            {"project_tech_html_string", tech_stack_container.to_string()}});
-            projects_elm.add_child(std::make_shared<element>(tmep));
-        }
-
-        head_elm->set_text_params_recursive(params);
-        header_elm->set_text_params_recursive(params);
-        body_elm->set_text_params_recursive(params);
-        body_elm->set_text_params_recursive({{"projects_html_string", projects_elm.to_string()}});
-        footer_elm->set_text_params_recursive(params);
-
-        doc.add_child(head_elm);
-        doc.add_child(header_elm);
-        doc.add_child(body_elm);
-        doc.add_child(footer_elm);
+        ss << "]";
 
         res->set_status(200, "OK");
-        res->send_html((doc.to_string()));
-        return exit_code::EXIT;
+        res->set_content_type("application/json");
+        res->set_body(ss.str());
+        return hamza_web::exit_code::EXIT;
     }
     catch (const std::exception &e)
     {
-        logger::error("Error in index_handler:\n" + std::string(e.what()));
         res->set_status(500, "Internal Server Error");
-        res->send_text("Error: " + std::string(e.what()));
-        return exit_code::ERROR;
+        res->set_content_type("application/json");
+        res->set_body("{\"error\": \"Failed to retrieve items\"}");
+        return hamza_web::exit_code::EXIT;
     }
-};
-// implement stress handler
-H stress_handler = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
-{
-    // Handle stress test requests
-    // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
-    // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
-    res->send_json("{\"status\": \"success\", \"message\": \"Stress test request handled successfully\"}");
-    return exit_code::EXIT;
-};
-// implement stress handler
-H stress_handler2 = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
-{
-    // Handle stress test requests
-    // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
-    // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
-
-    res->send_json("{\"status\": \"success\", \"message\": \"Stress 2222222222222222222222\"}");
-    return exit_code::EXIT;
-};
-
-H stress_handler_id = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
-{
-    auto params = req->get_path_params();
-    if (params.empty())
-    {
-        res->set_status(400, "Bad Request");
-        res->send_text("Missing required path parameter: id");
-        return exit_code::ERROR;
-    }
-    auto id = params[0].second; // Assuming the first parameter is the id
-    res->send_json("{\"status\": \"success\", \"message\": \"Stress test id: " + id + "\"}");
-    return exit_code::EXIT;
-};
-
-H stress_handler_id_name = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
-{
-    auto params = req->get_path_params();
-    if (params.size() < 2)
-    {
-        res->set_status(400, "Bad Request");
-        res->send_text("Missing required path parameters: id and name");
-        return exit_code::ERROR;
-    }
-    auto id = params[0].second;   // Assuming the first parameter is the id
-    auto name = params[1].second; // Assuming the second parameter is the name
-    // std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate some processing delay
-    res->send_json("{\"status\": \"success\", \"message\": \"Stress test id: " + id + ", name: " + name + "\"}");
-    return exit_code::EXIT;
-};
-
-std::function<bool()> get_random_01 = []() -> bool
-{
-    return rand() % 2 == 0;
-};
-
-H auth_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
-{
-    // Example authentication check
-    // In a real application, you would check headers, tokens, etc.
-    bool authenticated = get_random_01();
-
-    if (!authenticated)
-    {
-        res->set_status(401, "Unauthorized");
-        res->send_text("Unauthorized access");
-        return exit_code::EXIT;
-    }
-
-    return exit_code::CONTINUE; // Continue to the next handler if authenticated
-};
-
-H logger_middleware = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
-{
-    // Log request details
-    logger::info("Request received: " + req->get_method() + " " + req->get_uri() + " on thread " + std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id())));
-    // You can log more details as needed
-
-    // Continue to the next middleware or route handler
-    return exit_code::CONTINUE;
-};
-
-H stress_handler_post = []([[maybe_unused]] std::shared_ptr<web_request> req, std::shared_ptr<web_response> res) -> exit_code
-{
-    // Handle stress test requests
-    // std::cout << "Received stress request on thread " << std::this_thread::get_id() << std::endl;
-    // std::cout << "Handled stress request on thread " << std::this_thread::get_id() << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Simulate some processing delay
-    // logger::info("Received POST request with body size: " + std::to_string(req->get_body().size()));
-    res->send_json("{\"status\": \"success\", \"message\": \"Stress test POST with body size: " + std::to_string(req->get_body().size()) + "\"}");
-    return exit_code::EXIT;
-};
-
-std::unique_ptr<web_server<>> server;
-
-void handle_signal(int signal)
-{
-    logger::info("Received signal: " + std::to_string(signal));
-    // Perform cleanup or other actions as needed
-    server->stop();
-
-    std::exit(0); // Exit gracefully
 }
-
-int main()
+hamza_web::exit_code get_specific_item_handler(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
 {
-
-    std::signal(SIGINT, handle_signal);  // Handle interrupt signal
-    std::signal(SIGTERM, handle_signal); // Handle termination signal
-    std::signal(SIGQUIT, handle_signal); // Handle quit signal
-
     try
     {
-        logger::absolute_path_to_logs = "/home/hamza/Documents/Learnings/Projects/hamza-web-framwork/logs/";
-        logger::enabled_logging = true;
-        logger::clear();
+        int id = get_id_from_request(req);
+        auto item = get_item_store().get(id);
 
-        // hamza_http::epoll_config::MAX_FILE_DESCRIPTORS = 5;
-        // hamza_http::epoll_config::BACKLOG_SIZE = 128;
-
-        server = std::make_unique<web_server<>>(8000);
-        auto index_route = std::make_shared<web_route<>>(methods::GET, "/", std::vector<H>{index_handler});
-        auto stress_route_GET = std::make_shared<web_route<>>(methods::GET, "/stress", std::vector<H>{stress_handler});
-        auto stress_route_POST = std::make_shared<web_route<>>(methods::POST, "/stress/post", std::vector<H>{stress_handler_post});
-        auto stress_route_2 = std::make_shared<web_route<>>(methods::GET, "/stress2", std::vector<H>{stress_handler2});
-        auto stress_with_params = std::make_shared<web_route<>>(methods::GET, "/stress/:id", std::vector<H>{stress_handler_id});
-        auto stress_with_params2 = std::make_shared<web_route<>>(methods::GET, "/stress/:id/:name", std::vector<H>{stress_handler_id_name});
-
-        auto router = std::make_shared<web_router<>>();
-        auto index_router = std::make_shared<web_router<>>();
-
-        index_router->register_middleware(logger_middleware);
-        router->register_middleware(logger_middleware);
-
-        index_router->register_middleware(auth_middleware);
-        index_router->register_route(index_route);
-
-        router->register_route(stress_route_GET);
-        router->register_route(stress_route_2);
-        router->register_route(stress_with_params2);
-        router->register_route(stress_with_params);
-
-        router->register_route(stress_route_POST);
-
-        server->register_static("static");
-        server->register_router(router);
-        server->register_router(index_router);
-
-        server->listen([]()
-                       { std::cout << "Fork You." << std::endl; });
+        res->set_status(200, "OK");
+        res->set_content_type("application/json");
+        res->set_body(item.to_json());
+        return hamza_web::exit_code::EXIT;
+    }
+    catch (hamza_web::web_exception &e)
+    {
+        res->set_status(e.get_status_code(), e.get_status_message());
+        res->set_content_type("application/json");
+        res->set_body("{\"error\": \"" + std::string(e.what()) + "\"}");
+        return hamza_web::exit_code::EXIT;
     }
     catch (const std::exception &e)
     {
-        logger::error("Exception in main:\n" + std::string(e.what()));
+        res->set_status(500, "Internal Server Error");
+        res->set_content_type("application/json");
+        res->set_body("{\"error\": \"Failed to retrieve item\"}");
+        return hamza_web::exit_code::EXIT;
     }
-    return 0;
+}
+
+hamza_web::exit_code create_new_item_handler(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
+{
+    try
+    {
+        std::string name, description;
+        double price;
+
+        auto json = hamza_json_parser::parse(req->get_body());
+        name = dynamic_cast<hamza_json_parser::JSON_STRING *>(json["name"].get())->value;
+        description = dynamic_cast<hamza_json_parser::JSON_STRING *>(json["description"].get())->value;
+        price = dynamic_cast<hamza_json_parser::JSON_NUMBER *>(json["price"].get())->value;
+
+        int id = get_item_store().create(name, description, price);
+        auto item = get_item_store().get(id);
+
+        res->set_status(201, "Created");
+        res->set_content_type("application/json");
+        res->set_body(item.to_json());
+        return hamza_web::exit_code::EXIT;
+    }
+    catch (hamza_web::web_exception &e)
+    {
+        res->set_status(e.get_status_code(), e.get_status_message());
+        res->set_content_type("application/json");
+        hamza_json_parser::JSON_OBJECT json_error;
+        json_error.insert("error", std::make_shared<hamza_json_parser::JSON_STRING>("Failed To Create Item"));
+        res->set_body(json_error.stringify());
+        return hamza_web::exit_code::EXIT;
+    }
+    catch (const std::exception &e)
+    {
+        res->set_status(500, "Internal Server Error");
+        res->set_content_type("application/json");
+        hamza_json_parser::JSON_OBJECT json_error;
+        json_error.insert("error", std::make_shared<hamza_json_parser::JSON_STRING>("Failed To Create Item, Internal Server Error"));
+        res->set_body(json_error.stringify());
+        return hamza_web::exit_code::EXIT;
+    }
+}
+
+hamza_web::exit_code update_item_handler(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
+{
+    try
+    {
+        int id = get_id_from_request(req);
+        std::string name, description;
+        double price;
+
+        auto json = hamza_json_parser::parse(req->get_body());
+        name = dynamic_cast<hamza_json_parser::JSON_STRING *>(json["name"].get())->value;
+        description = dynamic_cast<hamza_json_parser::JSON_STRING *>(json["description"].get())->value;
+        price = dynamic_cast<hamza_json_parser::JSON_NUMBER *>(json["price"].get())->value;
+
+        get_item_store().update(id, name, description, price);
+        auto item = get_item_store().get(id);
+
+        res->set_status(200, "OK");
+        res->set_content_type("application/json");
+        res->set_body(item.to_json());
+        return hamza_web::exit_code::EXIT;
+    }
+    catch (hamza_web::web_exception &e)
+    {
+        res->set_status(e.get_status_code(), e.get_status_message());
+        res->set_content_type("application/json");
+        res->set_content_type("application/json");
+        hamza_json_parser::JSON_OBJECT json_error;
+        json_error.insert("error", std::make_shared<hamza_json_parser::JSON_STRING>("Failed To Update Item"));
+        res->set_body(json_error.stringify());
+        return hamza_web::exit_code::EXIT;
+    }
+    catch (const std::exception &e)
+    {
+        res->set_status(500, "Internal Server Error");
+        res->set_content_type("application/json");
+        res->set_content_type("application/json");
+        hamza_json_parser::JSON_OBJECT json_error;
+        json_error.insert("error", std::make_shared<hamza_json_parser::JSON_STRING>("Failed To Update Item"));
+        res->set_body(json_error.stringify());
+        return hamza_web::exit_code::EXIT;
+    }
+}
+
+hamza_web::exit_code index_handler(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
+{
+
+    std::string html_doc;
+
+    const std::string file_name = "index.html";
+
+    std::ifstream file(file_name);
+    if (file)
+    {
+        html_doc.assign((std::istreambuf_iterator<char>(file)),
+                        (std::istreambuf_iterator<char>()));
+    }
+
+    res->set_status(200, "OK");
+    res->send_html(html_doc);
+    return hamza_web::exit_code::EXIT;
+}
+
+hamza_web::exit_code un_matched_route_handler(std::shared_ptr<hamza_web::web_request> req, std::shared_ptr<hamza_web::web_response> res)
+{
+    res->set_status(404, "Not Found");
+
+    // For API requests, return JSON
+    if (req->get_path().substr(0, 5) == "/api/")
+    {
+        res->set_content_type("application/json");
+        res->set_body("{\"error\": \"Resource not found\"}");
+    }
+    else
+    {
+        // For web requests, return HTML
+        std::string four04;
+
+        std::ifstream file("404.html");
+        if (file)
+        {
+            four04.assign((std::istreambuf_iterator<char>(file)),
+                          (std::istreambuf_iterator<char>()));
+        }
+
+        res->send_html(four04);
+    }
+
+    return hamza_web::exit_code::EXIT;
+}
+
+// Main application entry point
+int main()
+{
+    try
+    {
+        constexpr uint16_t port = 3000;
+        const std::string host = "0.0.0.0";
+
+        // Create server instance
+        auto server = std::make_shared<hamza_web::web_server<>>(port, host);
+
+        // Create API router
+        auto api_router = std::make_shared<hamza_web::web_router<>>();
+
+        // CORS middleware
+        api_router->register_middleware(CORS);
+
+        // Define routes for items API
+        using V = std::vector<hamza_web::web_request_handler_t<>>;
+        using hamza_web::web_route;
+
+        // GET /api/items - Get all items
+        auto all_items_route = std::make_shared<web_route<>>(GET, "/api/items", V({get_all_items_handler}));
+
+        api_router->register_route(all_items_route);
+
+        // GET /api/items/:id - Get specific item
+        auto specific_item_route = std::make_shared<web_route<>>(GET, "/api/items/:id", V({get_specific_item_handler}));
+
+        api_router->register_route(specific_item_route);
+
+        // POST /api/items - Create new item
+        auto create_new_item_route = std::make_shared<web_route<>>(POST, "/api/items", V({create_new_item_handler}));
+        api_router->register_route(create_new_item_route);
+
+        // PUT /api/items/:id - Update item
+        auto update_item_route = std::make_shared<web_route<>>(PUT, "/api/items/:id", V({update_item_handler}));
+        api_router->register_route(update_item_route);
+
+        // DELETE /api/items/:id - Delete item
+        auto delete_item_route = std::make_shared<web_route<>>(DELETE, "/api/items/:id", V({delete_item_handler}));
+
+        api_router->register_route(delete_item_route);
+
+        auto index = std::make_shared<web_route<>>(GET, "/", V({index_handler}));
+
+        api_router->register_route(index);
+
+        // Register router with server
+        server->register_router(api_router);
+
+        // Register static files directory
+        server->register_static("static");
+
+        // Custom 404 handler
+        server->register_unmatched_route_handler(un_matched_route_handler);
+
+        server->listen(
+            []()
+            {
+                std::cout << "Server is now running!" << std::endl;
+                std::cout << "Visit http://localhost:3000 in your browser for API documentation" << std::endl;
+            },
+            [](const std::exception &e)
+            {
+                std::cerr << "Server error: " << e.what() << std::endl;
+            });
+
+        return 0;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Fatal error: " << e.what() << std::endl;
+        return 1;
+    }
 }
