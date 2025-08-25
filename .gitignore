@@ -147,4 +147,4 @@ Thumbs.db
 .env
 
 test/node_modules/
-./.vscode/1
+./.vscode
