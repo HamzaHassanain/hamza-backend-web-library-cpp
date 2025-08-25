@@ -1,4 +1,4 @@
-# Simple C++ Web Framework
+# Simple C++ Backend Web Library
 
 A simple C++ Web Framework for building some web applications. Built over the HTTP server I built here [hamza-http-server](https://github.com/HamzaHassanain/hamza-http-server-lib)
 
