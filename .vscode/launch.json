@@ -5,7 +5,7 @@
       "name": "Hamza (gdb) Launch",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/hamza_web_framework",
+      "program": "${workspaceFolder}/build/hh_web_framework",
       "args": ["&> ${workspaceFolder}/logs/runtime.log"],
       "stopAtEntry": false,
       "cwd": "${fileDirname}",

@@ -8,7 +8,7 @@
 #include "web_request.hpp"
 #include "web_exceptions.hpp"
 
-namespace hamza_web
+namespace hh_web
 {
     enum class exit_code
     {
@@ -16,7 +16,7 @@ namespace hamza_web
         CONTINUE = 0,
         ERROR = -1
     };
-    using http_request_callback_t = std::function<void(hamza_http::http_request &, hamza_http::http_response &)>;
+    using http_request_callback_t = std::function<void(hh_http::http_request &, hh_http::http_response &)>;
     using web_listen_callback_t = std::function<void()>;
     using web_error_callback_t = std::function<void(const std::exception &)>;
 

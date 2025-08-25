@@ -7,7 +7,7 @@
 #include "web_exceptions.hpp"
 #include "web_utilities.hpp"
 
-namespace hamza_web
+namespace hh_web
 {
     template <typename T, typename G>
     class web_router; // Forward declaration
@@ -158,7 +158,7 @@ namespace hamza_web
                 }
                 else
                 {
-                    throw std::runtime_error("Invalid route handler, return value must of  web_hamza_socket::exit_code\n");
+                    throw std::runtime_error("Invalid route handler, return value must of  web_hh_socket::exit_code\n");
                 }
             }
 

@@ -15,13 +15,13 @@
 #include "web_utilities.hpp"
 #include "thread_pool.hpp"
 
-#define HEADER_RECEIVED_PARAMS std::shared_ptr<hamza_socket::connection> conn,         \
+#define HEADER_RECEIVED_PARAMS std::shared_ptr<hh_socket::connection> conn,            \
                                const std::multimap<std::string, std::string> &headers, \
                                const std::string &method,                              \
                                const std::string &uri,                                 \
                                const std::string &version,                             \
                                const std::string &body
-namespace hamza_web
+namespace hh_web
 {
     /**
      * @brief High-level web server template for handling HTTP requests with routing.
@@ -41,16 +41,16 @@ namespace hamza_web
      * @tparam G Response type (must derive from web_response)
      */
     template <typename T = web_request, typename G = web_response>
-    class web_server : public hamza_http::http_server
+    class web_server : public hh_http::http_server
     {
     protected:
-        /// Server port number
-        uint16_t port;
-        /// Server host/IP address
-        std::string host;
-
         /// Thread pool for handling requests concurrently
         thread_pool worker_pool;
+
+        /// Server port number
+        int port;
+        /// Server host/IP address
+        std::string host;
 
         /// Directories to serve static files from
         std::vector<std::string> static_directories;
@@ -88,8 +88,8 @@ namespace hamza_web
          * @param port Port number to listen on
          * @param host Host address (default: "0.0.0.0" for all interfaces)
          */
-        explicit web_server(uint16_t port, const std::string &host = "0.0.0.0")
-            : port(port), host(host), hamza_http::http_server(port, host), worker_pool(std::thread::hardware_concurrency())
+        explicit web_server(int port, const std::string &host = "0.0.0.0")
+            : worker_pool(std::thread::hardware_concurrency()), port(port), host(host), hh_http::http_server(port, host)
         {
             static_assert(std::is_base_of<web_request, T>::value, "T must derive from web_request");
             static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
@@ -162,7 +162,7 @@ namespace hamza_web
             {
                 this->error_callback = error_callback;
             }
-            hamza_http::http_server::listen();
+            hh_http::http_server::listen();
         }
 
         /**
@@ -170,7 +170,7 @@ namespace hamza_web
          */
         virtual void stop()
         {
-            hamza_http::http_server::stop_server();
+            hh_http::http_server::stop_server();
             worker_pool.stop_workers();
         }
 
@@ -295,7 +295,7 @@ namespace hamza_web
          *
          * @note Intended to just pass the HTTP request, response to another thread to handle it
          */
-        virtual void on_request_received(hamza_http::http_request &request, hamza_http::http_response &response) override
+        virtual void on_request_received(hh_http::http_request &request, hh_http::http_response &response) override
         {
             auto req = std::make_shared<T>(std::move(request));
             auto res = std::make_shared<G>(std::move(response));

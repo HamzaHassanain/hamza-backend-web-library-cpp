@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace hamza_web::methods
+namespace hh_web::methods
 {
     extern const std::string GET;
     extern const std::string POST;

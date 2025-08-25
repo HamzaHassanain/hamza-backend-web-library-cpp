@@ -46,7 +46,7 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
         if (items.find(id) == items.end())
         {
-            throw hamza_web::web_exception(
+            throw hh_web::web_exception(
                 "Item not found",
                 "NOT_FOUND",
                 "ItemStore::get",
@@ -74,7 +74,7 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
         if (items.find(id) == items.end())
         {
-            throw hamza_web::web_exception(
+            throw hh_web::web_exception(
                 "Item not found",
                 "NOT_FOUND",
                 "ItemStore::update",
@@ -90,7 +90,7 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
         if (items.find(id) == items.end())
         {
-            throw hamza_web::web_exception(
+            throw hh_web::web_exception(
                 "Item not found",
                 "NOT_FOUND",
                 "ItemStore::remove",

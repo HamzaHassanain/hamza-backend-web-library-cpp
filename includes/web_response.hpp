@@ -8,7 +8,7 @@
 
 #include <atomic>
 #include <mutex>
-namespace hamza_web
+namespace hh_web
 {
     template <typename T, typename G>
     class web_server;
@@ -17,7 +17,7 @@ namespace hamza_web
      * @brief High-level web response wrapper with enhanced functionality.
      *
      * This class provides a high-level interface for HTTP responses by wrapping
-     * the lower-level hamza_http::http_response class. It adds web framework-specific
+     * the lower-level hh_http::http_response class. It adds web framework-specific
      * functionality such as convenient content type handling, JSON/HTML/text response
      * methods, cookie management, and automatic response finalization.
      *
@@ -37,7 +37,7 @@ namespace hamza_web
     {
     protected:
         /// Underlying HTTP response object
-        hamza_http::http_response response;
+        hh_http::http_response response;
 
         /// Flag to prevent double-sending of response
         std::atomic<bool> did_end = false;
@@ -91,7 +91,7 @@ namespace hamza_web
          * The HTTP response is moved to avoid unnecessary copying and to maintain
          * ownership semantics. Sets default status to 200 OK for convenience.
          */
-        web_response(hamza_http::http_response &&response) : response(std::move(response))
+        web_response(hh_http::http_response &&response) : response(std::move(response))
         {
             response.set_status(200, "OK");
         }
@@ -133,9 +133,9 @@ namespace hamza_web
         {
             {
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
-                response.add_header(hamza_http::HEADER_CONTENT_TYPE, "application/json");
+                response.add_header(hh_http::HEADER_CONTENT_TYPE, "application/json");
                 response.set_body(json_data);
-                response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(json_data.size()));
+                response.add_header(hh_http::HEADER_CONTENT_LENGTH, std::to_string(json_data.size()));
             }
             send();
         }
@@ -153,9 +153,9 @@ namespace hamza_web
         {
             {
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
-                response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/html");
+                response.add_header(hh_http::HEADER_CONTENT_TYPE, "text/html");
                 response.set_body(html_data);
-                response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(html_data.size()));
+                response.add_header(hh_http::HEADER_CONTENT_LENGTH, std::to_string(html_data.size()));
             }
             send();
         }
@@ -173,9 +173,9 @@ namespace hamza_web
         {
             {
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
-                response.add_header(hamza_http::HEADER_CONTENT_TYPE, "text/plain");
+                response.add_header(hh_http::HEADER_CONTENT_TYPE, "text/plain");
                 response.set_body(text_data);
-                response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(text_data.size()));
+                response.add_header(hh_http::HEADER_CONTENT_LENGTH, std::to_string(text_data.size()));
             }
             send();
         }
@@ -254,7 +254,7 @@ namespace hamza_web
         virtual void set_content_type(const std::string &content_type)
         {
             std::lock_guard<std::mutex> lock(modify_headers_mutex);
-            response.add_header(hamza_http::HEADER_CONTENT_TYPE, content_type);
+            response.add_header(hh_http::HEADER_CONTENT_TYPE, content_type);
         }
 
         /**
@@ -300,13 +300,13 @@ namespace hamza_web
             {
                 /// Get the lock of the modify_headers_mutex, to ensure that another thread hasn't modified the headers
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
-                if (response.get_header(hamza_http::HEADER_CONNECTION).empty())
+                if (response.get_header(hh_http::HEADER_CONNECTION).empty())
                 {
-                    response.add_header(hamza_http::HEADER_CONNECTION, "close");
+                    response.add_header(hh_http::HEADER_CONNECTION, "close");
                 }
-                if (response.get_header(hamza_http::HEADER_CONTENT_LENGTH).empty())
+                if (response.get_header(hh_http::HEADER_CONTENT_LENGTH).empty())
                 {
-                    response.add_header(hamza_http::HEADER_CONTENT_LENGTH, std::to_string(response.get_body().size()));
+                    response.add_header(hh_http::HEADER_CONTENT_LENGTH, std::to_string(response.get_body().size()));
                 }
             }
 

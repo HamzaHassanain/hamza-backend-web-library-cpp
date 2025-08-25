@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(hamza_web_framework)
+project(hh_web_framework)
 
 # Find Git package for submodule handling
 find_package(Git QUIET)
@@ -119,17 +119,19 @@ foreach(submodule ${REQUIRED_SUBMODULES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")  # Restore warnings for main project
 endforeach()
 
+
+
 if(WEB_LOCAL_TEST AND WEB_LOCAL_TEST STREQUAL "1")
-    add_executable(  hamza_web_framework example.cpp ${SRC_FILES}   )
+    add_executable(  hh_web_framework example.cpp ${SRC_FILES}   )
 else()
-    add_library(hamza_web_framework STATIC ${SRC_FILES})
+    add_library(hh_web_framework STATIC ${SRC_FILES})
 endif()
 
 
 # Find and link pthread
 find_package(Threads REQUIRED)
-target_link_libraries(hamza_web_framework Threads::Threads)
+target_link_libraries(hh_web_framework Threads::Threads)
 
 # Link libraries for each submodule
 set(SUBMODULE_LIBRARIES "http_server" "html_builder" "json_parser")  # Add more library names here as needed
-target_link_libraries(hamza_web_framework ${SUBMODULE_LIBRARIES})
+target_link_libraries(hh_web_framework ${SUBMODULE_LIBRARIES})

@@ -13,12 +13,14 @@
  * and other important events.
  */
 
-namespace hamza_web::logger
+namespace hh_web::logger
 {
 
-    /// @brief Absolute path to the log file, You are responsible for the path to be valid
-    /// make sure is ends with /some/path/logs/ or on windows C:\some\path\logs\
-
+    /**
+     * @brief Absolute path to the logs directory.
+     *
+     * This path must be valid and must end with a directory separator (e.g., /some/path/logs/ or C:\some\path\logs\).
+     */
     extern std::string absolute_path_to_logs;
 
     /// @brief Flag to enable or disable logging, default is false

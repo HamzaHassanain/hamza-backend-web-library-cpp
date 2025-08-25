@@ -9,17 +9,17 @@
 #include <vector>
 #include <atomic>
 #include <iostream>
-namespace hamza_web
+namespace hh_web
 {
 
     class thread_pool
     {
     public:
-        thread_pool(size_t num_threads)
+        thread_pool(unsigned int num_threads)
         {
             stop.store(false);
 
-            for (size_t i = 0; i < num_threads; ++i)
+            for (unsigned int i = 0; i < num_threads; ++i)
             {
                 workers.emplace_back([this]()
                                      {

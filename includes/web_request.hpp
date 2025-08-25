@@ -9,7 +9,7 @@
 
 #include "web_exceptions.hpp"
 #include "web_utilities.hpp"
-namespace hamza_web
+namespace hh_web
 {
     template <typename T, typename G>
     class web_server;
@@ -18,7 +18,7 @@ namespace hamza_web
      * @brief High-level web request wrapper with enhanced functionality.
      *
      * This class provides a high-level interface for HTTP requests by wrapping
-     * the lower-level hamza_http::http_request class. It adds web framework-specific
+     * the lower-level hh_http::http_request class. It adds web framework-specific
      * functionality such as path parameter extraction, query parameter parsing,
      * and convenient access to common HTTP headers.
      *
@@ -36,7 +36,7 @@ namespace hamza_web
     {
     protected:
         /// Underlying HTTP request object
-        hamza_http::http_request request;
+        hh_http::http_request request;
 
         /// Path parameters extracted from the request URI, in the form of key-value pairs
         /// http://localhost/users/:id/posts/:postID
@@ -61,7 +61,7 @@ namespace hamza_web
          * ownership semantics. This constructor is typically called by the web
          * server when processing incoming requests.
          */
-        web_request(hamza_http::http_request &&req) : request(std::move(req))
+        web_request(hh_http::http_request &&req) : request(std::move(req))
         {
         }
 
@@ -126,7 +126,7 @@ namespace hamza_web
          */
         virtual std::string get_path() const
         {
-            return hamza_web::get_path(request.get_uri());
+            return hh_web::get_path(request.get_uri());
         }
 
         /**
@@ -155,7 +155,7 @@ namespace hamza_web
         virtual std::vector<std::pair<std::string, std::string>> get_query_parameters() const
         {
 
-            return hamza_web::get_query_parameters(request.get_uri());
+            return hh_web::get_query_parameters(request.get_uri());
         }
 
         /**
@@ -224,7 +224,7 @@ namespace hamza_web
          */
         virtual std::vector<std::string> get_content_type() const
         {
-            return request.get_header(hamza_http::HEADER_CONTENT_TYPE);
+            return request.get_header(hh_http::HEADER_CONTENT_TYPE);
         }
 
         /**
@@ -238,7 +238,7 @@ namespace hamza_web
          */
         virtual std::vector<std::string> get_cookies() const
         {
-            return request.get_header(hamza_http::HEADER_COOKIE);
+            return request.get_header(hh_http::HEADER_COOKIE);
         }
 
         /**
@@ -252,7 +252,7 @@ namespace hamza_web
          */
         virtual std::vector<std::string> get_authorization() const
         {
-            return request.get_header(hamza_http::HEADER_AUTHORIZATION);
+            return request.get_header(hh_http::HEADER_AUTHORIZATION);
         }
     };
 }

@@ -7,7 +7,7 @@
 
 #include "web_methods.hpp"
 
-namespace hamza_web
+namespace hh_web
 {
     /**
      * @brief List of known static file extensions that should be treated as static resources.

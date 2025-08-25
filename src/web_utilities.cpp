@@ -9,7 +9,7 @@
 #include "../includes/logger.hpp"
 #include "../includes/web_utilities.hpp"
 
-namespace hamza_web
+namespace hh_web
 {
 
     // Helper functions for web-related tasks
@@ -359,8 +359,8 @@ namespace hamza_web
             size_t equal_pos = pair.find('=');
             if (equal_pos != std::string::npos)
             {
-                std::string name = hamza_web::trim(pair.substr(0, equal_pos));
-                std::string value = hamza_web::trim(pair.substr(equal_pos + 1));
+                std::string name = hh_web::trim(pair.substr(0, equal_pos));
+                std::string value = hh_web::trim(pair.substr(equal_pos + 1));
                 result.emplace_back(name, value);
             }
         }

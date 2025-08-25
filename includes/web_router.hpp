@@ -12,7 +12,7 @@
 #include "web_response.hpp"
 #include "web_methods.hpp"
 
-namespace hamza_web
+namespace hh_web
 {
     template <typename T, typename G>
     class web_route; // Forward declaration
@@ -98,7 +98,7 @@ namespace hamza_web
                 }
                 else
                 {
-                    throw std::runtime_error("Invalid middleware, return value must of  web_hamza_socket::exit_code\n");
+                    throw std::runtime_error("Invalid middleware, return value must of  web_hh_socket::exit_code\n");
                 }
             }
 

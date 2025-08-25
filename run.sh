@@ -28,10 +28,10 @@ make -j$(nproc)
 cd ..
 
 echo "Build completed successfully!"
-echo "Executable location: build/hamza_web_framework"
+echo "Executable location: build/hh_web_framework"
 
 # Optionally run the executable if 'run' argument is passed
 if [ "$1" = "run" ]; then
     echo "Running the application..."
-    ./build/hamza_web_framework
+    ./build/hh_web_framework
 fi

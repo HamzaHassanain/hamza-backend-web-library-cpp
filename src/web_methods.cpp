@@ -1,6 +1,6 @@
 #include "../includes/web_methods.hpp"
 
-namespace hamza_web::methods
+namespace hh_web::methods
 {
     const std::string GET = "GET";
     const std::string POST = "POST";

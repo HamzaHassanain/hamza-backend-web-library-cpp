@@ -10,7 +10,7 @@
 #include <html-builder/includes/document.hpp>
 #include <html-builder/includes/document_parser.hpp>
 #include <csignal>
-using namespace hamza_web;
+using namespace hh_web;
 using namespace hamza_html_builder;
 using H = web_request_handler_t<>;
 
@@ -252,8 +252,8 @@ int main()
         logger::enabled_logging = true;
         logger::clear();
 
-        // hamza_http::epoll_config::MAX_FILE_DESCRIPTORS = 5;
-        // hamza_http::epoll_config::BACKLOG_SIZE = 128;
+        // hh_http::epoll_config::MAX_FILE_DESCRIPTORS = 5;
+        // hh_http::epoll_config::BACKLOG_SIZE = 128;
 
         server = std::make_unique<web_server<>>(8000);
         auto index_route = std::make_shared<web_route<>>(methods::GET, "/", std::vector<H>{index_handler});

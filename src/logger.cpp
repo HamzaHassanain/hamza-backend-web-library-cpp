@@ -4,7 +4,7 @@
 #include <fstream>
 #include "../includes/logger.hpp"
 
-namespace hamza_web::logger
+namespace hh_web::logger
 {
     std::string absolute_path_to_logs = "/path-you-want-to-your-logs/";
 

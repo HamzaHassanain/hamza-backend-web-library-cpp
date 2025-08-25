@@ -4,17 +4,26 @@ A simple C++ Web Framework for building some web applications. Built over the HT
 
 ## Table of Contents
 
+- [Overview](#overview)
+
 - [Building the Project](#building-the-project)
 
-  - [Prerequisites](#prerequisites)
+- [Prerequisites](#prerequisites)
+
+  - [For Linux (Ubuntu/Debian)](#for-linux-ubuntudebian)
+  - [For Linux (CentOS/RHEL/Fedora)](#for-linux-centosrhelfedora)
+  - [For Windows](#for-windows)
+
+- [Quick Start](#quick-start)
+
+  - [Using Git Submodules](#using-git-submodules)
+
   - [How to Build](#how-to-build)
 
-    - [Prerequisites](#prerequisites-1)
-      - [For Linux (Ubuntu/Debian)](#for-linux-ubuntudebian)
-      - [For Linux (CentOS/RHEL/Fedora)](#for-linux-centosrhelfedora)
-      - [For Windows](#for-windows)
     - [Step 1: Clone the Repository](#step-1-clone-the-repository)
     - [Step 2: Understanding Build Modes](#step-2-understanding-build-modes)
+      - [Development Mode (WEB_LOCAL_TEST=1)](#development-mode-web_local_test1)
+      - [Library Mode (WEB_LOCAL_TEST≠1)](#library-mode-web_local_test1)
     - [Step 3: Configure Build Mode](#step-3-configure-build-mode)
       - [For Development/Testing](#for-developmenttesting)
       - [For Library Distribution](#for-library-distribution)
@@ -23,23 +32,14 @@ A simple C++ Web Framework for building some web applications. Built over the HT
       - [Option B: Manual Build (Linux/Mac/Windows)](#option-b-manual-build-linuxmacwindows)
       - [Windows-Specific Build Instructions](#windows-specific-build-instructions)
     - [Step 5: Run the Project](#step-5-run-the-project)
-      - [Development Mode (WEB_LOCAL_TEST=1)](#development-mode-socket_local_test1)
-      - [Library Mode (WEB_LOCAL_TEST≠1)](#library-mode-socket_local_test1)
-    - [Project Structure After Build](#project-structure-after-build)
+      - [Development Mode (WEB_LOCAL_TEST=1)](#development-mode-http_local_test1)
+      - [Library Mode (WEB_LOCAL_TEST≠1)](#library-mode-http_local_test1)
     - [Using the Library in Your Own Project](#using-the-library-in-your-own-project)
 
-- [API Documentation](#api-documentation)
+    - [API Documentation](#api-documentation)
 
-## Building The Project
 
-### Prerequisites
-
-- CMake 3.10 or higher
-- C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
-
-### How to build
-
-This guide will walk you through cloning, building, and running the project on both Linux and Windows systems.
+## Prerequisites
 
 Before you start, ensure you have the following installed:
 
@@ -60,6 +60,9 @@ git --version      # Any recent version
 
 #### For Linux (CentOS/RHEL/Fedora):
 
+- CMake 3.10 or higher
+- C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
+
 ```bash
 # For CentOS/RHEL
 sudo yum groupinstall "Development Tools"
@@ -78,6 +81,90 @@ sudo dnf install cmake git
    - **Visual Studio 2019/2022** (recommended): Download from [visualstudio.microsoft.com](https://visualstudio.microsoft.com/)
    - **MinGW-w64**: Download from [mingw-w64.org](https://www.mingw-w64.org/)
    - **MSYS2**: Download from [msys2.org](https://www.msys2.org/)
+
+## Quick Start
+
+### Using Git Submodules
+
+You just need to clone the repository as a submodule:
+
+```bash
+# In your base project directory, run the following command
+git submodule add https://github.com/HamzaHassanain/hamza-web-framework-cpp.git ./submodules/web-lib
+```
+
+Then in your project's CMakeLists.txt, include the submodule:
+
+```cmake
+# Your project's CMakeLists.txt
+cmake_minimum_required(VERSION 3.10)
+project(my_project)
+
+# This block checks for Git and initializes submodules recursively
+
+# Enable submodule checking for all libraries
+set(GIT_SUBMODULE ON CACHE BOOL "Enable submodule checking" FORCE)
+set(GIT_SUBMODULE_UPDATE_LATEST ON CACHE BOOL "Enable submodule updates" FORCE)
+
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+
+    # Update submodules as needed
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    option(GIT_SUBMODULE_UPDATE_LATEST "Update submodules to latest remote commits" ON)
+
+
+    if(GIT_SUBMODULE)
+        message(STATUS "Initializing and updating submodules...")
+
+        # First, initialize submodules if they don't exist
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_INIT_RESULT)
+        if(NOT GIT_SUBMOD_INIT_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_INIT_RESULT}, please checkout submodules")
+        endif()
+
+        # If enabled, update submodules to latest remote commits
+        if(GIT_SUBMODULE_UPDATE_LATEST)
+            message(STATUS "Updating submodules to latest remote commits...")
+            execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --remote --recursive
+                            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                            RESULT_VARIABLE GIT_SUBMOD_UPDATE_RESULT)
+            if(NOT GIT_SUBMOD_UPDATE_RESULT EQUAL "0")
+                message(WARNING "git submodule update --remote --recursive failed with ${GIT_SUBMOD_UPDATE_RESULT}, continuing with current submodule versions")
+            else()
+                message(STATUS "Submodules updated to latest versions successfully")
+            endif()
+        endif()
+    endif()
+endif()
+
+
+# Add the submodule
+add_subdirectory(submodules/web-lib)
+
+# Include directories for the library headers (this will also suppress warnings from headers)
+target_include_directories(my_project SYSTEM PRIVATE submodules/web-lib/)
+
+# Add additional compiler flags to suppress warnings from library headers
+target_compile_options(my_project PRIVATE -Wno-comment -Wno-overloaded-virtual -Wno-reorder)
+
+# Link against the main library
+# The library's CMakeLists.txt handles linking all dependencies automatically
+target_link_libraries(my_project hh_web_framework)
+```
+
+Then in your cpp file, include the http library header:
+
+```cpp
+#include "submodules/web-lib/web-lib.hpp"
+```
+
+## Building The Project
+
+### How to build
+
+This guide will walk you through cloning, building, and running the project on both Linux and Windows systems.
 
 ### Step 1: Clone the Repository
 
@@ -141,10 +228,10 @@ echo "WEB_LOCAL_TEST=0" > .env
 
 ```bash
 # Make the script executable
-chmod +x build.sh
+chmod +x run.sh
 
 # Run the build script
-./build.sh
+./run.sh
 ```
 
 This script automatically:
@@ -200,19 +287,19 @@ cmake --build .
 
 ```bash
 # Linux/Mac
-./build/socket_lib
+./build/hh_web_framework
 
 # Windows
-.\build\Debug\hamza_web_framework.exe   # Debug build
-.\build\Release\hamza_web_framework.exe # Release build
+.\build\Debug\hh_web_framework.exe   # Debug build
+.\build\Release\hh_web_framework.exe # Release build
 ```
 
 #### Library Mode (WEB_LOCAL_TEST):
 
 The build will create a static library file:
 
-- **Linux/Mac**: `build/libhamza_web_framework.a`
-- **Windows**: `build/hamza_web_framework.lib` or `build/Debug/hamza_web_framework.lib`
+- **Linux/Mac**: `build/libhh_web_framework.a`
+- **Windows**: `build/hh_web_framework.lib` or `build/Debug/hh_web_framework.lib`
 
 ### Using the Library in Your Own Project
 
@@ -224,17 +311,48 @@ cmake_minimum_required(VERSION 3.10)
 project(my_project)
 
 # Find the library
-find_library(HAMZA_WEB_FRAMEWORK_LIB
-    NAMES hamza_web_framework
-    PATHS /path/to/hamza-web-framework/build
+find_library(WEB_LIB
+    NAMES hh_web_framework
+    PATHS path/to/hamza-web-framework-cpp/build
 )
 
-target_include_directories(my_app PRIVATE /path/to/hamza-web-framework/includes)
-# or include the file "web-lib.hpp" directly in your source files, to get all the includes
+# Also You will need to link against the http-lib that this http server uses
+find_library(HTTP_LIB
+    NAMES http_lib
+    PATHS path/to/hamza-web-framework-cpp/build/libs/http-lib/
+)
+
+# Also, Linkk The socket-lib that the http uses
+find_library(SOCKET_LIB
+    NAMES socket_lib
+    PATHS path/to/hamza-web-framework-cpp/build/libs/http-lib/libs/socket-lib/
+)
+
+# Find the HTML builder library, Helps you build HTML templates
+find_library(HTML_BUILDER_LIB
+    NAMES html_builder
+    PATHS path/to/hamza-web-framework-cpp/build/libs/html-builder/
+)
+
+# Find the JSON parser library, Helps you parse JSON data
+find_library(JSON_PARSER_LIB
+    NAMES json_parser
+    PATHS path/to/hamza-web-framework-cpp/build/libs/json/
+)
+
+# include "path-to-hamza-hamza-web-framework-cpp/web-lib.hpp" in your cpp file for the full library
+# or un-comment the bellow line
+# target_include_directories(my_app PRIVATE /path/to/hamza-web-framework-cpp/includes)
 
 # Link against the library
 add_executable(my_app main.cpp)
-target_link_libraries(my_app ${HAMZA_WEB_FRAMEWORK_LIB})
+
+target_link_libraries(my_app ${SOCKET_LIB})
+target_link_libraries(my_app ${HTTP_LIB})
+target_link_libraries(my_app ${HTML_BUILDER_LIB})
+target_link_libraries(my_app ${JSON_PARSER_LIB})
+target_link_libraries(my_app ${WEB_LIB})
+target_link_libraries(my_app pthread) # For Linux/Mac
 ```
 
 ## API Documentation
@@ -243,7 +361,7 @@ Below is a reference of the core public classes and their commonly used methods.
 
 For detailed method signatures and advanced usage patterns, consult the comprehensive inline documentation in the header files located in `includes/` directory.
 
-### hamza_web::web_request
+### hh_web::web_request
 
 ```cpp
 #include "web_request.hpp"
@@ -255,7 +373,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Provides convenient access to common HTTP elements
   // - Designed as a base class that can be extended with virtual methods
 // - Construction:
-  web_request(hamza_http::http_request &&req) // — takes ownership of HTTP request object
+  web_request(hh_http::http_request &&req) // — takes ownership of HTTP request object
 // - Request information (all methods are virtual and can be overridden):
   virtual std::string get_method() const // — retrieves HTTP method (GET, POST, etc.)
   virtual std::string get_path() const // — extracts path portion from URI
@@ -279,7 +397,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Thread-safety guaranteed in base implementation
 ```
 
-### hamza_web::web_response
+### hh_web::web_response
 
 ```cpp
 #include "web_response.hpp"
@@ -292,7 +410,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Automatic content-type setting for common response types
   // - Designed as a base class with virtual methods for customization
 // - Construction:
-  web_response(hamza_http::http_response &&response) // — takes ownership of HTTP response object
+  web_response(hh_http::http_response &&response) // — takes ownership of HTTP response object
 // - Response configuration (all methods are virtual):
   virtual void set_status(int status_code, const std::string &status_message) // — sets HTTP status line
   virtual void set_body(const std::string &body) // — sets raw response content
@@ -313,7 +431,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - All methods can be overridden to customize response behavior
 ```
 
-### hamza_web::web_route
+### hh_web::web_route
 
 ```cpp
 #include "web_route.hpp"
@@ -344,7 +462,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - All core methods can be overridden for custom matching logic
 ```
 
-### hamza_web::web_router
+### hh_web::web_router
 
 ```cpp
 #include "web_router.hpp"
@@ -377,12 +495,12 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Type-safe handler registration and execution
 ```
 
-### hamza_web::web_server
+### hh_web::web_server
 
 ````cpp
 #include "web_server.hpp"
 
-### hamza_web::web_server
+### hh_web::web_server
 
 ```cpp
 #include "web_server.hpp"
@@ -409,7 +527,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
 // - Request processing (protected virtual methods):
   virtual void serve_static(std::shared_ptr<T> req, std::shared_ptr<G> res) // — serves static files with MIME type detection
   virtual void request_handler(std::shared_ptr<T> req, std::shared_ptr<G> res) // — main request processing pipeline
-  virtual void on_request_received(hamza_http::http_request &request, hamza_http::http_response &response) override // — converts and dispatches HTTP requests
+  virtual void on_request_received(hh_http::http_request &request, hh_http::http_response &response) override // — converts and dispatches HTTP requests
   virtual void on_unhandled_exception(std::shared_ptr<T> req, std::shared_ptr<G> res, const web_exception &e) // — handles uncaught exceptions
 // - Template type requirements:
   // - T must derive from web_request (enforced with static_assert)
@@ -423,7 +541,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Comprehensive callback system for server events
 ````
 
-### hamza_web::web_utilities
+### hh_web::web_utilities
 
 ```cpp
 #include "web_utilities.hpp"
@@ -460,7 +578,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Efficient parameter extraction
 ```
 
-### hamza_web::web_types
+### hh_web::web_types
 
 ```cpp
 #include "web_types.hpp"
@@ -473,7 +591,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
 // - Core enum:
   enum class exit_code { EXIT = 1, CONTINUE = 0, ERROR = -1 } // — controls middleware/handler execution flow
 // - Handler and callback types:
-  using http_request_callback_t = std::function<void(hamza_http::http_request &, hamza_http::http_response &)> // — low-level HTTP handler
+  using http_request_callback_t = std::function<void(hh_http::http_request &, hh_http::http_response &)> // — low-level HTTP handler
   using web_listen_callback_t = std::function<void()> // — server started callback
   using web_error_callback_t = std::function<void(const std::exception &)> // — server error callback
   template <typename T, typename G> using web_unhandled_exception_callback_t = std::function<void(std::shared_ptr<T>, std::shared_ptr<G>, const web_exception &)> // — exception handler
@@ -484,7 +602,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Extensible through template parameters
 ```
 
-### hamza_web::web_methods
+### hh_web::web_methods
 
 ```cpp
 #include "web_methods.hpp"
@@ -506,7 +624,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Used for route matching and method validation
 ```
 
-### hamza_web::logger
+### hh_web::logger
 
 ```cpp
 #include "logger.hpp"
@@ -532,8 +650,4 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Thread-safe with mutex protection
   // - Separate files for different log levels
   // - Minimal overhead when disabled
-```
-
-```
-
 ```
