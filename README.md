@@ -2,11 +2,13 @@
 
 A simple C++ Web Framework for building some web applications. Built over the HTTP server I built here [hamza-http-server](https://github.com/HamzaHassanain/hamza-http-server-lib)
 
+It also Uses these two libraries:
+
+[hamza-json-parser](https://github.com/HamzaHassanain/hamza-json-parser) For JSON parsing and manipulation.
+
+[hamza-html-builder](https://github.com/HamzaHassanain/hamza-html-builder) For building HTML responses.
+
 ## Table of Contents
-
-- [Overview](#overview)
-
-- [Building the Project](#building-the-project)
 
 - [Prerequisites](#prerequisites)
 
@@ -18,26 +20,25 @@ A simple C++ Web Framework for building some web applications. Built over the HT
 
   - [Using Git Submodules](#using-git-submodules)
 
-  - [How to Build](#how-to-build)
+- [Building the Project](#building-the-project)
 
-    - [Step 1: Clone the Repository](#step-1-clone-the-repository)
-    - [Step 2: Understanding Build Modes](#step-2-understanding-build-modes)
-      - [Development Mode (WEB_LOCAL_TEST=1)](#development-mode-web_local_test1)
-      - [Library Mode (WEB_LOCAL_TEST≠1)](#library-mode-web_local_test1)
-    - [Step 3: Configure Build Mode](#step-3-configure-build-mode)
-      - [For Development/Testing](#for-developmenttesting)
-      - [For Library Distribution](#for-library-distribution)
-    - [Step 4: Build the Project](#step-4-build-the-project)
-      - [Option A: Using the Provided Script (Linux/Mac)](#option-a-using-the-provided-script-linuxmac)
-      - [Option B: Manual Build (Linux/Mac/Windows)](#option-b-manual-build-linuxmacwindows)
-      - [Windows-Specific Build Instructions](#windows-specific-build-instructions)
-    - [Step 5: Run the Project](#step-5-run-the-project)
-      - [Development Mode (WEB_LOCAL_TEST=1)](#development-mode-http_local_test1)
-      - [Library Mode (WEB_LOCAL_TEST≠1)](#library-mode-http_local_test1)
-    - [Using the Library in Your Own Project](#using-the-library-in-your-own-project)
+  - [Step 1: Clone the Repository](#step-1-clone-the-repository)
+  - [Step 2: Understanding Build Modes](#step-2-understanding-build-modes)
+    - [Development Mode (WEB_LOCAL_TEST=1)](#development-mode-web_local_test1)
+    - [Library Mode (WEB_LOCAL_TEST≠1)](#library-mode-web_local_test1)
+  - [Step 3: Configure Build Mode](#step-3-configure-build-mode)
+    - [For Development/Testing](#for-developmenttesting)
+    - [For Library Distribution](#for-library-distribution)
+  - [Step 4: Build the Project](#step-4-build-the-project)
+    - [Option A: Using the Provided Script (Linux/Mac)](#option-a-using-the-provided-script-linuxmac)
+    - [Option B: Manual Build (Linux/Mac/Windows)](#option-b-manual-build-linuxmacwindows)
+    - [Windows-Specific Build Instructions](#windows-specific-build-instructions)
+  - [Step 5: Run the Project](#step-5-run-the-project)
+    - [Development Mode (WEB_LOCAL_TEST=1)](#development-mode-http_local_test1)
+    - [Library Mode (WEB_LOCAL_TEST≠1)](#library-mode-http_local_test1)
+  - [Using the Library in Your Own Project](#using-the-library-in-your-own-project)
 
-    - [API Documentation](#api-documentation)
-
+  - [API Documentation](#api-documentation)
 
 ## Prerequisites
 
@@ -157,7 +158,30 @@ target_link_libraries(my_project hh_web_framework)
 Then in your cpp file, include the http library header:
 
 ```cpp
+#include "submodules/web-lib/web-lib.hpp" // to use the web library
+#include "submodules/web-lib/libs/json/json-parser.hpp" // to use the json parser library
+#include "submodules/web-lib/libs/html-builder/html-builder.hpp" // to use the html builder library
+```
+
+### Simple web server
+
+```cpp
 #include "submodules/web-lib/web-lib.hpp"
+#include "submodules/web-lib/libs/json/json-parser.hpp"
+#include "submodules/web-lib/libs/html-builder/html-builder.hpp"
+
+int main() {
+    hh_web::web_server server;
+
+    int port = 3000;
+    std::string host = "0.0.0.0";
+
+    // Create server instance
+    auto server = std::make_shared<hh_web::web_server<>>(port, host);
+
+    server->start();
+    return 0;
+}
 ```
 
 ## Building The Project
@@ -497,11 +521,6 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
 
 ### hh_web::web_server
 
-````cpp
-#include "web_server.hpp"
-
-### hh_web::web_server
-
 ```cpp
 #include "web_server.hpp"
 
@@ -539,7 +558,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Automatic exception conversion to appropriate HTTP status codes
   // - Extensible through inheritance and method overriding
   // - Comprehensive callback system for server events
-````
+```
 
 ### hh_web::web_utilities
 
