@@ -1,10 +1,11 @@
 #pragma once
 
+#include "../libs/http-server/http-lib.hpp"
+#include "logger.hpp"
+
 #include <string>
 #include <vector>
-#include <http-server/includes/http_response.hpp>
-#include <http-server/includes/http_consts.hpp>
-#include <logger.hpp>
+
 #include <atomic>
 #include <mutex>
 namespace hamza_web

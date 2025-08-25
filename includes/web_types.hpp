@@ -2,12 +2,12 @@
 #include <functional>
 #include <memory>
 #include <initializer_list>
-#include <http-server/libs/socket-lib/includes/exceptions.hpp>
-#include <http-server/includes/http_request.hpp>
-#include <http-server/includes/http_response.hpp>
-#include <web_response.hpp>
-#include <web_request.hpp>
-#include <web_exceptions.hpp>
+
+#include "../libs/http-server/http-lib.hpp"
+#include "web_response.hpp"
+#include "web_request.hpp"
+#include "web_exceptions.hpp"
+
 namespace hamza_web
 {
     enum class exit_code

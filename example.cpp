@@ -7,21 +7,8 @@
 #include <fstream>
 #include <sstream>
 
-#include <json_parser.hpp>
-#include <JSON_OBJECT.hpp>
-#include <JSON_ARRAY.hpp>
-#include <JSON_STRING.hpp>
-#include <JSON_NUMBER.hpp>
-#include <JSON_BOOLEAN.hpp>
-
-#include <web_server.hpp>
-#include <web_router.hpp>
-#include <web_route.hpp>
-#include <web_request.hpp>
-#include <web_response.hpp>
-#include <web_methods.hpp>
-#include <web_utilities.hpp>
-#include <web_exceptions.hpp>
+#include "libs/json/json-lib.hpp"
+#include "web-lib.hpp"
 
 using hamza_web::methods::DELETE;
 using hamza_web::methods::GET;
@@ -220,7 +207,6 @@ hamza_web::exit_code update_item_handler(std::shared_ptr<hamza_web::web_request>
     {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
-        res->set_content_type("application/json");
         hamza_json_parser::JSON_OBJECT json_error;
         json_error.insert("error", std::make_shared<hamza_json_parser::JSON_STRING>("Failed To Update Item"));
         res->set_body(json_error.stringify());
@@ -229,7 +215,6 @@ hamza_web::exit_code update_item_handler(std::shared_ptr<hamza_web::web_request>
     catch (const std::exception &e)
     {
         res->set_status(500, "Internal Server Error");
-        res->set_content_type("application/json");
         res->set_content_type("application/json");
         hamza_json_parser::JSON_OBJECT json_error;
         json_error.insert("error", std::make_shared<hamza_json_parser::JSON_STRING>("Failed To Update Item"));
@@ -243,7 +228,7 @@ hamza_web::exit_code index_handler(std::shared_ptr<hamza_web::web_request> req, 
 
     std::string html_doc;
 
-    const std::string file_name = "index.html";
+    const std::string file_name = "html/index.html";
 
     std::ifstream file(file_name);
     if (file)
@@ -272,7 +257,7 @@ hamza_web::exit_code un_matched_route_handler(std::shared_ptr<hamza_web::web_req
         // For web requests, return HTML
         std::string four04;
 
-        std::ifstream file("404.html");
+        std::ifstream file("html/404.html");
         if (file)
         {
             four04.assign((std::istreambuf_iterator<char>(file)),

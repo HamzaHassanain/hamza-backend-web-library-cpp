@@ -1,21 +1,19 @@
 #pragma once
 
-#include <logger.hpp>
 #include <thread>
 #include <iostream>
 
-#include <http-server/includes/http_server.hpp>
-#include <http-server/includes/http_request.hpp>
-#include <http-server/includes/http_response.hpp>
+#include "../libs/http-server/http-lib.hpp"
 
-#include <web_types.hpp>
-#include <web_methods.hpp>
-#include <web_request.hpp>
-#include <web_response.hpp>
-#include <web_router.hpp>
-#include <web_exceptions.hpp>
-#include <web_utilities.hpp>
-#include <thread_pool.hpp>
+#include "logger.hpp"
+#include "web_types.hpp"
+#include "web_methods.hpp"
+#include "web_request.hpp"
+#include "web_response.hpp"
+#include "web_router.hpp"
+#include "web_exceptions.hpp"
+#include "web_utilities.hpp"
+#include "thread_pool.hpp"
 
 #define HEADER_RECEIVED_PARAMS std::shared_ptr<hamza_socket::connection> conn,         \
                                const std::multimap<std::string, std::string> &headers, \

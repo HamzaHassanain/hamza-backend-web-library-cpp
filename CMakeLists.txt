@@ -107,18 +107,7 @@ file(GLOB SRC_FILES src/*.cpp)
 # link all cpp files inside framework folder, framework/src
 
 set(CMAKE_CXX_STANDARD 17)
-# Add include directories for all libraries
-include_directories(${CMAKE_SOURCE_DIR}/includes)
-include_directories(${CMAKE_SOURCE_DIR}/libs)
-include_directories(${CMAKE_SOURCE_DIR}/libs/http-server/libs/socket-lib/includes)
-include_directories(${CMAKE_SOURCE_DIR}/libs/http-server/libs/)
 
-# Add include directories for each submodule
-foreach(submodule ${REQUIRED_SUBMODULES})
-    if(EXISTS "${PROJECT_SOURCE_DIR}/libs/${submodule}/includes")
-        include_directories(${CMAKE_SOURCE_DIR}/libs/${submodule}/includes)
-    endif()
-endforeach()
 
 
 # Add subdirectories for each submodule
@@ -131,7 +120,7 @@ foreach(submodule ${REQUIRED_SUBMODULES})
 endforeach()
 
 if(WEB_LOCAL_TEST AND WEB_LOCAL_TEST STREQUAL "1")
-    add_executable(  hamza_web_framework app.cpp ${SRC_FILES}   )
+    add_executable(  hamza_web_framework example.cpp ${SRC_FILES}   )
 else()
     add_library(hamza_web_framework STATIC ${SRC_FILES})
 endif()

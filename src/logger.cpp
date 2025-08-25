@@ -2,7 +2,8 @@
 #include <string>
 #include <mutex>
 #include <fstream>
-#include <logger.hpp>
+#include "../includes/logger.hpp"
+
 namespace hamza_web::logger
 {
     std::string absolute_path_to_logs = "/path-you-want-to-your-logs/";

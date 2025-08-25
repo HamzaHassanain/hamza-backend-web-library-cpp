@@ -5,10 +5,10 @@
 #include <utility>
 #include <mutex>
 
-#include <http-server/includes/http_request.hpp>
-#include <http-server/includes/http_consts.hpp>
-#include <web_exceptions.hpp>
-#include <web_utilities.hpp>
+#include "../libs/http-server/http-lib.hpp"
+
+#include "web_exceptions.hpp"
+#include "web_utilities.hpp"
 namespace hamza_web
 {
     template <typename T, typename G>

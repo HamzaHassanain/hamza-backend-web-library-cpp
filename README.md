@@ -1,6 +1,6 @@
 # Simple C++ Web Framework
 
-A simple C++ Web Framework for building some web applications.
+A simple C++ Web Framework for building some web applications. Built over the HTTP server I built here [hamza-http-server](https://github.com/HamzaHassanain/hamza-http-server-lib)
 
 ## Table of Contents
 
@@ -230,6 +230,7 @@ find_library(HAMZA_WEB_FRAMEWORK_LIB
 )
 
 target_include_directories(my_app PRIVATE /path/to/hamza-web-framework/includes)
+# or include the file "web-lib.hpp" directly in your source files, to get all the includes
 
 # Link against the library
 add_executable(my_app main.cpp)
@@ -241,62 +242,6 @@ target_link_libraries(my_app ${HAMZA_WEB_FRAMEWORK_LIB})
 Below is a reference of the core public classes and their commonly used methods. Include the corresponding header before use.
 
 For detailed method signatures and advanced usage patterns, consult the comprehensive inline documentation in the header files located in `includes/` directory.
-
-### hamza_socket::tcp_server
-
-```cpp
-#include "tcp_server.hpp"
-
-// - Purpose: Abstract base class for TCP server implementations with event-driven callbacks.
-// - Key characteristics:
-  // - Pure virtual class (cannot be instantiated directly)
-  // - Provides interface for connection and message handling
-  // - Implemented by select_server and epoll_server
-// - Pure virtual methods to implement:
-  virtual void close_connection(std::shared_ptr<connection> conn) = 0 // — request connection closure
-  virtual void send_message(std::shared_ptr<connection> conn, const data_buffer &db) = 0 // — send data to connection
-  virtual void on_exception_occurred(const std::exception &e) = 0 // — handle server exceptions
-  virtual void on_connection_opened(std::shared_ptr<connection> conn) = 0 // — new connection callback
-  virtual void on_connection_closed(std::shared_ptr<connection> conn) = 0 // — connection closed callback
-  virtual void on_message_received(std::shared_ptr<connection> conn, const data_buffer &db) = 0 // — data received callback
-  virtual void on_listen_success() = 0 // — server started successfully
-  virtual void on_shutdown_success() = 0 // — server shutdown completed
-  virtual void on_waiting_for_activity() = 0 // — server waiting for events
-// - Server control methods:
-  virtual void listen(int timeout = 1000) = 0 // — start server event loop
-  virtual void stop_server() = 0 // — request graceful shutdown
-```
-
-### hamza_socket::epoll_server
-
-```cpp
-#include "epoll_server.hpp"
-
-// - Purpose: High-performance Linux epoll-based TCP server for thousands of concurrent connections.
-// - Platform support: Linux only (requires epoll system call)
-// - Key constructor:
-  epoll_server(int max_fds) // — specify number of maximum open file descriptors (more files, means more memory usage)
-// - Server management:
-  virtual void listen(int timeout) override // — start epoll event loop
-  virtual bool register_listener_socket(std::shared_ptr<socket> sock_ptr) // — register listening socket
-  virtual void stop_server() override // — graceful shutdown
-// - Connection interface (inherit from tcp_server):
-  void close_connection(std::shared_ptr<connection> conn) override // — close specific connection
-  void send_message(std::shared_ptr<connection> conn, const data_buffer &db) override // — send data asynchronously
-// - Event callbacks to override:
-  virtual void on_connection_opened(std::shared_ptr<connection> conn) override
-  virtual void on_connection_closed(std::shared_ptr<connection> conn) override
-  virtual void on_message_received(std::shared_ptr<connection> conn, const data_buffer &db) override
-  virtual void on_exception_occurred(const std::exception &e) override
-  virtual void on_listen_success() override
-  virtual void on_shutdown_success() override
-  virtual void on_waiting_for_activity() override
-// - Performance features:
-  // - Edge-triggered epoll for O(1) event notification
-  // - Efficient batch processing of events
-  // - Non-blocking I/O throughout
-  // - Automatic write buffering and flow control
-```
 
 ### hamza_web::web_request
 

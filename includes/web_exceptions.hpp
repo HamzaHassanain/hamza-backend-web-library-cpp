@@ -1,5 +1,5 @@
 #pragma once
-#include <http-server/libs/socket-lib/includes/exceptions.hpp>
+#include "../libs/http-server/http-lib.hpp"
 
 namespace hamza_web
 {
