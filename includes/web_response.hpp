@@ -304,6 +304,10 @@ namespace hh_web
                 {
                     response.add_header(hh_http::HEADER_CONNECTION, "close");
                 }
+                if (response.get_header(hh_http::HEADER_CONTENT_TYPE).empty())
+                {
+                    response.add_header(hh_http::HEADER_CONTENT_TYPE, "text/plain");
+                }
                 if (response.get_header(hh_http::HEADER_CONTENT_LENGTH).empty())
                 {
                     response.add_header(hh_http::HEADER_CONTENT_LENGTH, std::to_string(response.get_body().size()));

@@ -3,6 +3,8 @@
  *
  * This script tests the performance of the CRUD API by sending a large number of
  * concurrent requests and measuring response times and success rates.
+ * It also includes security tests with invalid requests and common attack patterns
+ * to verify server robustness against malicious inputs.
  *
  * Requirements:
  * - Node.js
@@ -27,6 +29,8 @@ const CONFIG = {
   iterations: 5, // Number of iterations for each test
   delayBetweenTests: 1000, // Delay between tests in ms
   timeout: 5000, // Request timeout in ms
+  securityTestPercent: 30, // Percentage of requests that should be security/invalid tests
+  enableSecurityTests: true, // Whether to include security tests
 };
 
 // Test statistics
@@ -66,6 +70,13 @@ const stats = {
     maxTime: 0,
     minTime: Number.MAX_SAFE_INTEGER,
   },
+  security: {
+    success: 0, // For security tests, success means the server properly rejected the request
+    fail: 0, // For security tests, fail means the server improperly accepted the request
+    totalTime: 0,
+    maxTime: 0,
+    minTime: Number.MAX_SAFE_INTEGER,
+  },
 };
 
 // Generate a random item
@@ -94,6 +105,30 @@ async function timedRequest(url, options, testType) {
     const endTime = Date.now();
     const elapsed = endTime - startTime;
 
+    // For security tests, a failure (4xx/5xx) is actually a success
+    if (testType === "security") {
+      if (!response.ok) {
+        // The server correctly rejected the malicious request
+        stats[testType].success++;
+        stats[testType].totalTime += elapsed;
+        stats[testType].maxTime = Math.max(stats[testType].maxTime, elapsed);
+        stats[testType].minTime = Math.min(stats[testType].minTime, elapsed);
+        return { securityTestSuccess: true, status: response.status };
+      } else {
+        // The server incorrectly accepted the malicious request
+
+        stats[testType].fail++;
+        console.error(
+          "\n",
+          colors.red(
+            `Security test failed! Server accepted malicious request to ${url}\n`
+          )
+        );
+        return { securityTestFailed: true };
+      }
+    }
+
+    // Normal request handling (non-security tests)
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -115,11 +150,7 @@ async function timedRequest(url, options, testType) {
     const elapsed = endTime - startTime;
 
     stats[testType].fail++;
-    console.error(
-      `Error in ${testType} request: ${error.message} \n`,
-      error,
-      "\n"
-    );
+    console.error(`Error in ${testType} request: ${error.message} \n`, "\n");
     return null;
   }
 }
@@ -280,6 +311,129 @@ async function deleteItemTest(items) {
   );
 }
 
+// Security Tests
+// Generate a random security test
+async function securityTest(items) {
+  // List of security test types
+  const testTypes = [
+    "sqlInjection",
+    "xss",
+    "invalidJson",
+    "oversizedPayload",
+    "malformedId",
+    "methodNotAllowed",
+    "invalidContentType",
+    "nonExistentEndpoint",
+  ];
+
+  // Randomly select a test type
+  const testType = testTypes[Math.floor(Math.random() * testTypes.length)];
+
+  // If items array is empty or undefined, use a fallback ID
+  const fallbackId = "123456789";
+  const randomItem =
+    items && items.length > 0
+      ? items[Math.floor(Math.random() * items.length)]
+      : { id: fallbackId };
+
+  switch (testType) {
+    case "sqlInjection":
+      // SQL Injection tests
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/items/${randomItem.id}' OR '1'='1`,
+        { method: "GET" },
+        "security"
+      );
+
+    case "xss":
+      // XSS tests
+      const xssPayload = {
+        name: `<script>alert('XSS')</script>`,
+        description: `<img src="x" onerror="alert('XSS')">`,
+        price: 10.99,
+      };
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/items`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(xssPayload),
+        },
+        "security"
+      );
+
+    case "invalidJson":
+      // Invalid JSON format
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/items`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: `{"name": "Invalid JSON, "description": "Missing quote", price: 10.99}`,
+        },
+        "security"
+      );
+
+    case "oversizedPayload":
+      // Oversized payload
+      const hugeDescription = "x".repeat(1024 * 1000);
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/items`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Huge Item",
+            description: hugeDescription,
+            price: 99.99,
+          }),
+        },
+        "security"
+      );
+
+    case "malformedId":
+      // Malformed ID parameter
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/items/null`,
+        { method: "GET" },
+        "security"
+      );
+
+    case "methodNotAllowed":
+      // Method not allowed
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/items`,
+        { method: "PATCH" },
+        "security"
+      );
+
+    case "invalidContentType":
+      // Invalid content type
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/items`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: "This is not JSON",
+        },
+        "security"
+      );
+
+    case "nonExistentEndpoint":
+      // Non-existent endpoint
+      return await timedRequest(
+        `${CONFIG.baseUrl}/api/nonexistent/${Math.random()
+          .toString(36)
+          .substring(7)}`,
+        { method: "GET" },
+        "security"
+      );
+
+    default:
+      return null;
+  }
+}
+
 // Print test results
 function printResults() {
   console.log(`\n${"=".repeat(50)}`);
@@ -308,6 +462,10 @@ function printResults() {
   printStats("readAll");
   printStats("update");
   printStats("delete");
+
+  if (CONFIG.enableSecurityTests) {
+    printStats("security");
+  }
 
   const totalSuccess = Object.values(stats).reduce(
     (sum, s) => sum + s.success,
@@ -341,6 +499,7 @@ async function main() {
     - Concurrent requests: ${CONFIG.concurrentRequests}
     - Iterations: ${CONFIG.iterations}
     - Timeout: ${CONFIG.timeout}ms
+    - Security tests: ${CONFIG.enableSecurityTests ? "Enabled" : "Disabled"}
     `)
   );
 
@@ -367,6 +526,11 @@ async function main() {
 
     // Run delete items test (using the copy that will be modified)
     await runConcurrentRequests("Delete Item", itemsCopy, deleteItemTest);
+
+    // Run security tests if enabled
+    if (CONFIG.enableSecurityTests) {
+      await runConcurrentRequests("Security Testing", items, securityTest);
+    }
 
     // Print results
     printResults();

@@ -82,7 +82,6 @@ hh_web::exit_code CORS(std::shared_ptr<hh_web::web_request> req, std::shared_ptr
 {
     // only allow => http://localhost:4000 to GET,DELETE,POST,PUT,
     // any other origin just GET
-
     auto origins = req->get_header("Origin");
     if (std::find(origins.begin(), origins.end(), "http://localhost:4000") != origins.end())
     {
@@ -169,12 +168,15 @@ hh_web::exit_code create_new_item_handler(std::shared_ptr<hh_web::web_request> r
         double price;
 
         auto json = parse(req->get_body());
+
         name = getter::get_string(json["name"]);
         description = getter::get_string(json["description"]);
         price = getter::get_number(json["price"]);
 
         int id = get_item_store().create(name, description, price);
         auto item = get_item_store().get(id);
+
+        auto x = item.to_json();
 
         res->set_status(201, "Created");
         res->set_content_type("application/json");
@@ -289,6 +291,40 @@ hh_web::exit_code un_matched_route_handler(std::shared_ptr<hh_web::web_request> 
     return hh_web::exit_code::EXIT;
 }
 
+hh_web::exit_code json_cheacker(std::shared_ptr<hh_web::web_request> req, std::shared_ptr<hh_web::web_response> res)
+{
+    try
+    {
+        if (hh_web::body_has_malicious_content(req->get_body()))
+        {
+            hh_web::logger::error("Malicious content detected");
+            hh_web::logger::error("Body:\n" + req->get_body());
+            hh_web::logger::error("\n\n");
+            throw hh_web::web_exception("Malicious content detected", 500, "Internal Server Error");
+        }
+        return hh_web::exit_code::CONTINUE;
+    }
+    catch (hh_web::web_exception &e)
+    {
+        res->set_status(e.get_status_code(), e.get_status_message());
+        res->set_content_type("application/json");
+        JSON_OBJECT json_error;
+        json_error.insert("error", maker::make_string("Malicious content detected"));
+        res->set_body(json_error.stringify());
+
+        return hh_web::exit_code::EXIT;
+    }
+    catch (const std::exception &e)
+    {
+        res->set_status(400, "Bad Request");
+        res->set_content_type("application/json");
+        res->set_body("{\"error\": \"Invalid JSON format\"}");
+        return hh_web::exit_code::EXIT;
+    }
+
+    return hh_web::exit_code::EXIT;
+}
+
 // Main application entry point
 int main()
 {
@@ -296,6 +332,11 @@ int main()
     {
         int port = 3000;
         std::string host = "0.0.0.0";
+        hh_web::logger::absolute_path_to_logs = "/home/hamza/Documents/Learnings/Projects/hamza-web-framwork/logs/";
+        hh_web::logger::enabled_logging = true;
+        hh_http::config::MAX_BODY_SIZE = 1024 * 64;
+        hh_http::config::MAX_HEADER_SIZE = 1024 * 4;
+        hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(20);
 
         // Create server instance
         auto server = std::make_shared<hh_web::web_server<>>(port, host);
@@ -321,11 +362,11 @@ int main()
         api_router->register_route(specific_item_route);
 
         // POST /api/items - Create new item
-        auto create_new_item_route = std::make_shared<web_route<>>(POST, "/api/items", V({create_new_item_handler}));
+        auto create_new_item_route = std::make_shared<web_route<>>(POST, "/api/items", V({json_cheacker, create_new_item_handler}));
         api_router->register_route(create_new_item_route);
 
         // PUT /api/items/:id - Update item
-        auto update_item_route = std::make_shared<web_route<>>(PUT, "/api/items/:id", V({update_item_handler}));
+        auto update_item_route = std::make_shared<web_route<>>(PUT, "/api/items/:id", V({json_cheacker, update_item_handler}));
         api_router->register_route(update_item_route);
 
         // DELETE /api/items/:id - Delete item
@@ -345,6 +386,14 @@ int main()
 
         // Custom 404 handler
         server->register_unmatched_route_handler(un_matched_route_handler);
+
+        server->register_headers_received_callback([](HEADER_RECEIVED_PARAMS)
+                                                   { hh_web::logger::info("Headers received");
+                                                    hh_web::logger::info(method + " " + uri + " " + version);
+                                                        for (const auto &[key, value] : headers)
+                                                        {
+                                                            hh_web::logger::info("Header: " + key + " = " + value);
+                                                        } });
 
         server->listen(
             []()

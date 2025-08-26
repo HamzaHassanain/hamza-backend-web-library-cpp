@@ -8,6 +8,7 @@
 
 #include "../includes/logger.hpp"
 #include "../includes/web_utilities.hpp"
+#include "../libs/http-server/includes/http_consts.hpp"
 
 namespace hh_web
 {
@@ -496,5 +497,92 @@ namespace hh_web
     {
         static const std::vector<std::string> known_methods = {methods::GET, methods::POST, methods::PUT, methods::DELETE, methods::PATCH, methods::HEAD, methods::OPTIONS};
         return std::find(known_methods.begin(), known_methods.end(), method) == known_methods.end();
+    }
+
+    bool body_has_malicious_content(const std::string &body, bool XSS, bool SQL, bool CMD)
+    {
+        // Empty bodies are not malicious
+        if (body.empty())
+            return false;
+
+        // Check for common XSS attack patterns
+        const std::vector<std::string> xss_patterns = {
+            "<script>", "</script>",
+            "javascript:", "javascript%3A",
+            "onerror=", "onload=", "onclick=", "onmouseover=",
+            "eval(", "document.cookie",
+            "fromCharCode", "String.fromCharCode",
+            "alert(", "prompt(", "confirm("};
+
+        // Check for SQL injection patterns
+        const std::vector<std::string> sql_patterns = {
+            "SELECT", "UPDATE", "DELETE", "INSERT", "DROP",
+            "UNION", "JOIN", "WHERE",
+            "--", "/*", "*/",
+            "1=1", "OR 1=1", "' OR '1'='1",
+            "SLEEP(", "BENCHMARK(",
+            "information_schema"};
+
+        // Check for command injection patterns
+        const std::vector<std::string> cmd_patterns = {
+            "`", "&&", "||", ";", "|",
+            "$(", ">${",
+            "/etc/passwd", "/bin/sh", "/bin/bash",
+            "curl", "wget", "nc ", "netcat"};
+
+        // tokenize the lowercase body
+        std::istringstream iss(body);
+        std::vector<std::string> tokens;
+        std::string token;
+        while (std::getline(iss, token, ' '))
+        {
+            tokens.push_back(token);
+        }
+        for (auto &t : tokens)
+        {
+            std::transform(t.begin(), t.end(), t.begin(),
+                           [](unsigned char c)
+                           { return std::tolower(c); });
+        }
+
+        for (auto &t : tokens)
+        {
+            if (XSS)
+                for (const auto &pattern : xss_patterns)
+                {
+                    if (t.find(pattern) != std::string::npos)
+                        return true;
+                }
+            if (SQL)
+                for (const auto &pattern : sql_patterns)
+                {
+                    if (t == pattern)
+                        return true;
+                }
+            if (CMD)
+                for (const auto &pattern : cmd_patterns)
+                {
+                    if (t == pattern)
+                        return true;
+                }
+        }
+
+        // Check for unusual character sequences that might be encoded attacks
+        int consecutive_special_chars = 0;
+        for (char c : body)
+        {
+            if (c == '%' || c == '\\' || c == '+' || c == '&' || c == '<' || c == '>' || c == '=' || c == '"' || c == '\'')
+            {
+                consecutive_special_chars++;
+                if (consecutive_special_chars > 5)
+                    return true;
+            }
+            else
+            {
+                consecutive_special_chars = 0;
+            }
+        }
+
+        return false;
     }
 };

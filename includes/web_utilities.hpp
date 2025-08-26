@@ -136,4 +136,14 @@ namespace hh_web
      * @return true if the method is unknown, false otherwise
      */
     bool unknown_method(const std::string &method);
+
+    /**
+     * @brief Check if the request body contains malicious content.
+     *
+     * @param body The request body as a string
+     * @return true if malicious content is detected
+     * @return false if the body is clean
+     */
+
+    bool body_has_malicious_content(const std::string &body, bool XSS = true, bool SQL = true, bool CMD = true);
 }
