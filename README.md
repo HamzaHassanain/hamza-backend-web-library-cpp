@@ -1,4 +1,4 @@
-# Simple C++ Web Framework
+# Simple C++ Backend Web Library
 
 A simple C++ Web Framework for building some web applications. Built over the HTTP server I built here [hamza-http-server](https://github.com/HamzaHassanain/hamza-http-server-lib)
 
@@ -106,6 +106,13 @@ project(my_project)
 # Enable submodule checking for all libraries
 set(GIT_SUBMODULE ON CACHE BOOL "Enable submodule checking" FORCE)
 set(GIT_SUBMODULE_UPDATE_LATEST ON CACHE BOOL "Enable submodule updates" FORCE)
+
+# Disable submodule checking for all libraries.
+# I recommend you uncomment these two lines once the building process is done for the first time
+# Just comment it when you need to update to the latest version of the library 
+# set(GIT_SUBMODULE OFF CACHE BOOL "Disable submodule checking" FORCE)
+# set(GIT_SUBMODULE_UPDATE_LATEST OFF CACHE BOOL "Disable submodule updates" FORCE)
+
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
