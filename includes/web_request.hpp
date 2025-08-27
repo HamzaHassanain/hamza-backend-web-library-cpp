@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <mutex>
+#include <algorithm>
 
 #include "../libs/http-server/http-lib.hpp"
 
@@ -253,6 +254,26 @@ namespace hh_web
         virtual std::vector<std::string> get_authorization() const
         {
             return request.get_header(hh_http::HEADER_AUTHORIZATION);
+        }
+
+        virtual bool keep_alive() const
+        {
+            auto req_connection_values = get_header(hh_http::HEADER_CONNECTION);
+
+            // transform all the values to upper case
+            for (auto &s : req_connection_values)
+            {
+                std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c)
+                               { return std::toupper(c); });
+            }
+
+            std::string keep_alive = "KEEP-ALIVE";
+            if (std::find(req_connection_values.begin(), req_connection_values.end(), keep_alive) != req_connection_values.end())
+            {
+                return true;
+            }
+
+            return false;
         }
     };
 }

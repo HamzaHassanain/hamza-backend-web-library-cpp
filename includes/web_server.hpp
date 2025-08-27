@@ -312,9 +312,9 @@ namespace hh_web
             {
                 logger::error("Unknown HTTP method: " + req->get_method());
 
-                // Send back 405 Method Not Allowed
-                res->set_status(405, "Method Not Allowed");
-                res->send_text("405 Method Not Allowed");
+                // Send back bad Request
+                res->set_status(400, "Bad Request");
+                res->send_text("400 Bad Request: " + req->get_method());
                 res->end();
                 return;
             }

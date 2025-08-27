@@ -5,7 +5,7 @@
 
 #include <string>
 #include <vector>
-
+#include <iostream>
 #include <atomic>
 #include <mutex>
 namespace hh_web
@@ -297,6 +297,11 @@ namespace hh_web
             if (did_send.exchange(true))
                 return;
 
+            /// Cannont send on an ended connection
+            if (did_end.load())
+            {
+                return;
+            }
             {
                 /// Get the lock of the modify_headers_mutex, to ensure that another thread hasn't modified the headers
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
@@ -323,6 +328,25 @@ namespace hh_web
             {
                 logger::error("Error sending response: " + std::string(e.what()));
                 end();
+            }
+        }
+        /**
+         * @brief Set the keep alive object
+         *  @note This will add the appropriate headers to the response
+         * @param keep_alive
+         */
+
+        virtual void set_keep_alive(bool keep_alive)
+        {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
+            response.clear_header_values("Connection");
+            if (keep_alive)
+            {
+                response.add_header("Connection", "keep-alive");
+            }
+            else
+            {
+                response.add_header("Connection", "close");
             }
         }
     };
