@@ -24,12 +24,12 @@ const colors = require("colors");
 // Configuration
 const CONFIG = {
   baseUrl: "http://localhost:3000",
-  numItems: 20, // Number of items to create
-  concurrentRequests: 50, // Number of concurrent requests per test
-  iterations: 5, // Number of iterations for each test
-  delayBetweenTests: 1000, // Delay between tests in ms
-  timeout: 5000, // Request timeout in ms
-  securityTestPercent: 30, // Percentage of requests that should be security/invalid tests
+  numItems: 1000, // Number of items to create
+  concurrentRequests: 200, // Number of concurrent requests per test
+  iterations: 10, // Number of iterations for each test
+  delayBetweenTests: 500, // Delay between tests in ms
+  timeout: 20000, // Request timeout in ms
+  securityTestPercent: 500, // Percentage of requests that should be security/invalid tests
   enableSecurityTests: true, // Whether to include security tests
 };
 

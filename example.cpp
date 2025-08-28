@@ -187,7 +187,7 @@ hh_web::exit_code create_new_item_handler(std::shared_ptr<hh_web::web_request> r
     {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
-        JSON_OBJECT json_error;
+        JsonObject json_error;
         json_error.insert("error", maker::make_string("Failed To Create Item"));
         res->set_body(json_error.stringify());
         return hh_web::exit_code::EXIT;
@@ -196,7 +196,7 @@ hh_web::exit_code create_new_item_handler(std::shared_ptr<hh_web::web_request> r
     {
         res->set_status(500, "Internal Server Error");
         res->set_content_type("application/json");
-        JSON_OBJECT json_error;
+        JsonObject json_error;
         json_error.insert("error", maker::make_string("Failed To Create Item, Internal Server Error"));
         res->set_body(json_error.stringify());
         return hh_web::exit_code::EXIT;
@@ -228,7 +228,7 @@ hh_web::exit_code update_item_handler(std::shared_ptr<hh_web::web_request> req, 
     {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
-        JSON_OBJECT json_error;
+        JsonObject json_error;
         json_error.insert("error", maker::make_string("Failed To Update Item"));
         res->set_body(json_error.stringify());
         return hh_web::exit_code::EXIT;
@@ -237,7 +237,7 @@ hh_web::exit_code update_item_handler(std::shared_ptr<hh_web::web_request> req, 
     {
         res->set_status(500, "Internal Server Error");
         res->set_content_type("application/json");
-        JSON_OBJECT json_error;
+        JsonObject json_error;
         json_error.insert("error", maker::make_string("Failed To Update Item"));
         res->set_body(json_error.stringify());
         return hh_web::exit_code::EXIT;
@@ -308,7 +308,7 @@ hh_web::exit_code json_cheacker(std::shared_ptr<hh_web::web_request> req, std::s
     {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
-        JSON_OBJECT json_error;
+        JsonObject json_error;
         json_error.insert("error", maker::make_string("Malicious content detected"));
         res->set_body(json_error.stringify());
 
@@ -345,7 +345,7 @@ int main()
         auto api_router = std::make_shared<hh_web::web_router<>>();
 
         // CORS middleware
-        api_router->register_middleware(CORS);
+        api_router->use(CORS);
 
         // Define routes for items API
         using V = std::vector<hh_web::web_request_handler_t<>>;
@@ -354,35 +354,35 @@ int main()
         // GET /api/items - Get all items
         auto all_items_route = std::make_shared<web_route<>>(GET, "/api/items", V({get_all_items_handler}));
 
-        api_router->register_route(all_items_route);
+        api_router->add_route(all_items_route);
 
         // GET /api/items/:id - Get specific item
         auto specific_item_route = std::make_shared<web_route<>>(GET, "/api/items/:id", V({get_specific_item_handler}));
 
-        api_router->register_route(specific_item_route);
+        api_router->add_route(specific_item_route);
 
         // POST /api/items - Create new item
         auto create_new_item_route = std::make_shared<web_route<>>(POST, "/api/items", V({json_cheacker, create_new_item_handler}));
-        api_router->register_route(create_new_item_route);
+        api_router->add_route(create_new_item_route);
 
         // PUT /api/items/:id - Update item
         auto update_item_route = std::make_shared<web_route<>>(PUT, "/api/items/:id", V({json_cheacker, update_item_handler}));
-        api_router->register_route(update_item_route);
+        api_router->add_route(update_item_route);
 
         // DELETE /api/items/:id - Delete item
         auto delete_item_route = std::make_shared<web_route<>>(DELETE, "/api/items/:id", V({delete_item_handler}));
 
-        api_router->register_route(delete_item_route);
+        api_router->add_route(delete_item_route);
 
         auto index = std::make_shared<web_route<>>(GET, "/", V({index_handler}));
 
-        api_router->register_route(index);
+        api_router->add_route(index);
 
         // Register router with server
-        server->register_router(api_router);
+        server->use_router(api_router);
 
         // Register static files directory
-        server->register_static("static");
+        server->use_static("static");
 
         // Custom 404 handler
         server->register_unmatched_route_handler(un_matched_route_handler);

@@ -17,9 +17,6 @@ namespace hh_web
     template <typename T, typename G>
     class web_route; // Forward declaration
 
-    template <typename T, typename G>
-    class web_server; // Forward declaration
-
     /**
      * @brief Template class for managing web routes and middleware chains.
      *
@@ -107,7 +104,8 @@ namespace hh_web
 
     public:
         /// Allow web_server to access protected members
-        friend class web_server<T, G>;
+        template <typename, typename, typename>
+        friend class web_server;
 
         /**
          * @brief Default constructor with type safety validation.
@@ -200,7 +198,7 @@ namespace hh_web
          *
          * @throws std::invalid_argument if the route path is empty
          */
-        virtual void register_route(std::shared_ptr<web_route<T, G>> route)
+        virtual void add_route(std::shared_ptr<web_route<T, G>> route)
         {
             if (route->get_path().empty())
             {
@@ -216,9 +214,41 @@ namespace hh_web
          * Adds a middleware handler to the router's middleware chain. Middleware
          * is executed in the order it's registered, before any route handlers.
          */
-        virtual void register_middleware(const web_request_handler_t<T, G> &middleware)
+        virtual void use(const web_request_handler_t<T, G> &middleware)
         {
             middlewares.push_back(middleware);
+        }
+
+        /// @brief Register a GET route with the router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void get(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            add_route(std::make_shared<web_route<T, G>>("GET", path, handlers));
+        }
+
+        /// @brief Register a POST route with the router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void post(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            add_route(std::make_shared<web_route<T, G>>("POST", path, handlers));
+        }
+
+        /// @brief Register a PUT route with the router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void put(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            add_route(std::make_shared<web_route<T, G>>("PUT", path, handlers));
+        }
+
+        /// @brief Register a DELETE route with the router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void delete_(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            add_route(std::make_shared<web_route<T, G>>("DELETE", path, handlers));
         }
     };
 }

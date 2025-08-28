@@ -11,6 +11,9 @@
 namespace hh_web
 {
     template <typename T, typename G>
+    class web_router;
+
+    template <typename T, typename G, typename R>
     class web_server;
 
     /**
@@ -80,7 +83,7 @@ namespace hh_web
 
     public:
         /// Allow web_server to access private members
-        template <typename T, typename G>
+        template <typename T, typename G, typename R>
         friend class web_server;
 
         /**
@@ -113,10 +116,35 @@ namespace hh_web
          * - 400 "Bad Request" for client errors
          * - 404 "Not Found" for missing resources
          * - 500 "Internal Server Error" for server errors
+         *
+         * @note If no status_message is provided, a default message will be set based on the status code:
+         * @note status_code >= 200 and < 300  -> OK
+         * @note status_code >= 300 and < 400  -> Redirection
+         * @note status_code >= 400 and < 500  -> Client Error
+         * @note status_code >= 500               -> Internal Server Error
          */
-        virtual void set_status(int status_code, const std::string &status_message)
+        virtual void set_status(int status_code, std::string status_message = "")
         {
             std::lock_guard<std::mutex> lock(modify_headers_mutex);
+            if (status_message.empty())
+            {
+                if (status_code >= 200 && status_code < 300)
+                {
+                    status_message = "OK";
+                }
+                else if (status_code >= 300 && status_code < 400)
+                {
+                    status_message = "Redirection";
+                }
+                else if (status_code >= 400 && status_code < 500)
+                {
+                    status_message = "Client Error";
+                }
+                else if (status_code >= 500)
+                {
+                    status_message = "Internal Server Error";
+                }
+            }
             response.set_status(status_code, status_message);
         }
 
@@ -287,8 +315,12 @@ namespace hh_web
          * @note This method is automatically called by send_json(), send_html(),
          * and send_text() convenience methods.
          * @note You can call this method only once, as subsequent calls will be ignored.
+         *
+         * @note Body may be set beforehand, but it can also be passed as an argument to this method.
+         * @param body (optional) The response body content to send.
+         *
          */
-        virtual void send() noexcept
+        virtual void send(const std::string &body = "") noexcept
         {
             /// Only one thread is guaranteed to send the response,
             /// exchange works as follows:
@@ -302,6 +334,12 @@ namespace hh_web
             {
                 return;
             }
+
+            if (!body.empty())
+            {
+                set_body(body);
+            }
+
             {
                 /// Get the lock of the modify_headers_mutex, to ensure that another thread hasn't modified the headers
                 std::lock_guard<std::mutex> lock(modify_headers_mutex);
@@ -348,6 +386,18 @@ namespace hh_web
             {
                 response.add_header("Connection", "close");
             }
+        }
+        /**
+         * @brief Sets the header object
+         * @note it clears any existing values for the specified header before adding the new value.
+         * @param name
+         * @param value
+         */
+        virtual void set_header(const std::string &name, const std::string &value)
+        {
+            std::lock_guard<std::mutex> lock(modify_headers_mutex);
+            response.clear_header_values(name);
+            response.add_header(name, value);
         }
     };
 }

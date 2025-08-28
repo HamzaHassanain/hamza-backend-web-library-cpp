@@ -40,7 +40,7 @@ namespace hh_web
      * @tparam T Request type (must derive from web_request)
      * @tparam G Response type (must derive from web_response)
      */
-    template <typename T = web_request, typename G = web_response>
+    template <typename T = web_request, typename G = web_response, typename R = web_router<T, G>>
     class web_server : public hh_http::http_server
     {
     protected:
@@ -55,7 +55,7 @@ namespace hh_web
         /// Directories to serve static files from
         std::vector<std::string> static_directories;
         /// Registered routers for handling dynamic requests
-        std::vector<std::shared_ptr<web_router<T, G>>> routers;
+        std::vector<std::shared_ptr<R>> routers;
 
         /// Callback executed when server starts listening
         web_listen_callback_t listen_callback = [this]() -> void
@@ -93,6 +93,10 @@ namespace hh_web
         {
             static_assert(std::is_base_of<web_request, T>::value, "T must derive from web_request");
             static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
+            static_assert(std::is_base_of<web_router<T, G>, R>::value, "R must derive from web_router<T, G>");
+
+            auto base_router = std::make_shared<R>();
+            this->routers.push_back(base_router);
         }
 
         // Disable copy and move for resource safety
@@ -105,7 +109,7 @@ namespace hh_web
          * @brief Register a router for handling dynamic requests.
          * @param router Shared pointer to the router to register
          */
-        virtual void register_router(std::shared_ptr<web_router<T, G>> router)
+        virtual void use_router(std::shared_ptr<web_router<T, G>> router)
         {
             this->routers.push_back(router);
         }
@@ -114,7 +118,7 @@ namespace hh_web
          * @brief Register a directory for serving static files.
          * @param directory Path to the static files directory
          */
-        virtual void register_static(const std::string &directory)
+        virtual void use_static(const std::string &directory)
         {
             static_directories.push_back(directory);
         }
@@ -172,6 +176,38 @@ namespace hh_web
         {
             hh_http::http_server::stop_server();
             worker_pool.stop_workers();
+        }
+
+        /// @brief Register a GET route for the base router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void get(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            routers[0]->add_route(std::make_shared<web_route<T, G>>("GET", path, handlers));
+        }
+
+        /// @brief Register a POST route for the base router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void post(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            routers[0]->add_route(std::make_shared<web_route<T, G>>("POST", path, handlers));
+        }
+
+        /// @brief Register a PUT route for the base router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void put(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            routers[0]->add_route(std::make_shared<web_route<T, G>>("PUT", path, handlers));
+        }
+
+        /// @brief Register a DELETE route for the base router.
+        /// @param path The path for the route
+        /// @param handlers The request handlers for the route
+        void delete_(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers)
+        {
+            routers[0]->add_route(std::make_shared<web_route<T, G>>("DELETE", path, handlers));
         }
 
     protected:

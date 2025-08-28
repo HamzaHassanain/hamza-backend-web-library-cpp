@@ -13,6 +13,9 @@
 namespace hh_web
 {
     template <typename T, typename G>
+    class web_router;
+
+    template <typename T, typename G, typename R>
     class web_server;
 
     /**
@@ -48,9 +51,12 @@ namespace hh_web
         /// Modify path_params mutex
         mutable std::mutex path_params_mutex;
 
+        /// Custom request parameters (e.g., from query string)
+        std::map<std::string, std::string> request_params;
+
     public:
         /// Allow web_server to access private members
-        template <typename T, typename G>
+        template <typename T, typename G, typename R>
         friend class web_server;
 
         /**
@@ -274,6 +280,61 @@ namespace hh_web
             }
 
             return false;
+        }
+        /**
+         * @brief Add a custom request parameter.
+         * @note This parameter is ment to be set by the user of the request.
+         * @param key The parameter name.
+         * @param value The parameter value.
+         */
+        virtual void add_param(const std::string &key, const std::string &value)
+        {
+            request_params[key] = value;
+        }
+
+        /**
+         * @brief Get a request parameter.
+         *
+         * @param key The parameter name.
+         * @return std::string The parameter value.
+         */
+        virtual std::string get_param(const std::string &key) const
+        {
+            auto it = request_params.find(key);
+            if (it != request_params.end())
+            {
+                return it->second;
+            }
+            return "";
+        }
+
+        /**
+         * @brief Get all request parameters.
+         *
+         * @return std::map<std::string, std::string> A map of all request parameters.
+         */
+        virtual std::map<std::string, std::string> get_params() const
+        {
+            return request_params;
+        }
+
+        /**
+         * @brief Clear all request parameters.
+         *
+         */
+        virtual void clear_params()
+        {
+            request_params.clear();
+        }
+
+        /**
+         * @brief Remove a request parameter.
+         *
+         * @param key The parameter name.
+         */
+        virtual void remove_param(const std::string &key)
+        {
+            request_params.erase(key);
         }
     };
 }
