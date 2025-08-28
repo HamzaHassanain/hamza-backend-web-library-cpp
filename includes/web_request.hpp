@@ -287,7 +287,7 @@ namespace hh_web
          * @param key The parameter name.
          * @param value The parameter value.
          */
-        virtual void add_param(const std::string &key, const std::string &value)
+        virtual void set_param(const std::string &key, const std::string &value)
         {
             request_params[key] = value;
         }
