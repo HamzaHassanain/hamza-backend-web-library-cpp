@@ -165,6 +165,19 @@ namespace hh_web
             return hh_web::get_query_parameters(request.get_uri());
         }
 
+        virtual std::string get_query_parameter(const std::string &key) const
+        {
+            auto params = get_query_parameters();
+            for (const auto &param : params)
+            {
+                if (param.first == key)
+                {
+                    return param.second;
+                }
+            }
+            return "";
+        }
+
         /**
          * @brief Get the HTTP version of the request.
          * @return String containing the HTTP version (e.g., "HTTP/1.1", "HTTP/2")
