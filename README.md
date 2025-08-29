@@ -11,9 +11,6 @@ This framework also integrates with the following libraries:
 * [hamza-html-builder](https://github.com/HamzaHassanain/hamza-html-builder) — for generating dynamic HTML responses.
 
 
-Would you like me to make it more **technical and professional** (like documentation style) or more **casual and approachable** (like a project README intro)?
-
-
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
