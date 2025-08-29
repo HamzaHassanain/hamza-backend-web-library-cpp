@@ -14,7 +14,7 @@ namespace hh_web
     {
         EXIT = 1,
         CONTINUE = 0,
-        ERROR = -1
+        _ERROR = -1
     };
     using http_request_callback_t = std::function<void(hh_http::http_request &, hh_http::http_response &)>;
     using web_listen_callback_t = std::function<void()>;

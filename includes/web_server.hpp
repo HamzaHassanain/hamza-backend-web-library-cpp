@@ -120,7 +120,7 @@ namespace hh_web
          */
         virtual void use_static(const std::string &directory)
         {
-            static_directories.push_back(directory);
+            static_directories.push_back(CPP_PROJECT_SOURCE_DIR+directory);
         }
 
         /**

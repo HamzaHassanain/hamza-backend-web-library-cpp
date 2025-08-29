@@ -495,7 +495,7 @@ namespace hh_web
 
     bool unknown_method(const std::string &method)
     {
-        static const std::vector<std::string> known_methods = {methods::GET, methods::POST, methods::PUT, methods::DELETE, methods::PATCH, methods::HEAD, methods::OPTIONS};
+        static const std::vector<std::string> known_methods = {methods::GET, methods::POST, methods::PUT, methods::DELETE_METHOD, methods::PATCH, methods::HEAD, methods::OPTIONS};
         return std::find(known_methods.begin(), known_methods.end(), method) == known_methods.end();
     }
 

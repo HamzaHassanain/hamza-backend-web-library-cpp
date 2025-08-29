@@ -12,7 +12,7 @@
 #include "web-lib.hpp"
 
 using namespace hh_json;
-using hh_web::methods::DELETE;
+//using hh_web::methods::DELETE;
 using hh_web::methods::GET;
 using hh_web::methods::POST;
 using hh_web::methods::PUT;
@@ -247,16 +247,46 @@ hh_web::exit_code update_item_handler(std::shared_ptr<hh_web::web_request> req, 
 hh_web::exit_code index_handler(std::shared_ptr<hh_web::web_request> req, std::shared_ptr<hh_web::web_response> res)
 {
 
-    std::string html_doc;
+    std::string html_doc = R"(
+        
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Item Store API</title>
+            <link rel="stylesheet" href="/style.css">
+        </head>
+        <body>
+            <div class="container">
+                <h1>Welcome to the Item Store API</h1>
+                <p>This is a simple RESTful API for managing items.</p>
+                <h2>Available Endpoints:</h2>
+                <ul>
+                    <li><strong>GET /api/items</strong> - Retrieve all items</li>
+                    <li><strong>GET /api/items/:id</strong> - Retrieve a specific item by ID</li>
+                    <li><strong>POST /api/items</strong> - Create a new item (JSON body required)</li>
+                    <li><strong>PUT /api/items/:id</strong> - Update an existing item by ID (JSON body required)</li>
+                    <li><strong>DELETE /api/items/:id</strong> - Delete an item by ID</li>
+                </ul>
+                <h2>Example JSON Body for POST/PUT:</h2>
+                <pre>
+                {   
+                    "name": "Item Name",
+                    "description": "Item Description",
+                    "price": 19.99  
+                    }
+                </pre>
+                <p>Replace <code>:id</code> with the actual item ID.</p>
+                <p>All responses are in JSON format.</p>
+            </div>
+        </body>
+        </html>
 
-    const std::string file_name = "html/index.html";
+    )";
 
-    std::ifstream file(file_name);
-    if (file)
-    {
-        html_doc.assign((std::istreambuf_iterator<char>(file)),
-                        (std::istreambuf_iterator<char>()));
-    }
+
+   
 
     res->set_status(200, "OK");
     res->send_html(html_doc);
@@ -276,14 +306,26 @@ hh_web::exit_code un_matched_route_handler(std::shared_ptr<hh_web::web_request> 
     else
     {
         // For web requests, return HTML
-        std::string four04;
+        std::string four04 = R"(
+           
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>404 Not Found</title>
+                <link rel="stylesheet" href="/style.css">
+            </head>
+            <body>
+                <div class="container">
+                    <h1>404 Not Found</h1>
+                    <p>The requested resource could not be found on this server.</p>
+                    <a href="/">Go to Home</a>
+                </div>
+            </body>
+            </html>
+)";
 
-        std::ifstream file("html/404.html");
-        if (file)
-        {
-            four04.assign((std::istreambuf_iterator<char>(file)),
-                          (std::istreambuf_iterator<char>()));
-        }
 
         res->send_html(four04);
     }
@@ -332,11 +374,11 @@ int main()
     {
         int port = 3000;
         std::string host = "0.0.0.0";
-        hh_web::logger::absolute_path_to_logs = "/home/hamza/Documents/Learnings/Projects/hamza-web-framwork/logs/";
+        hh_web::logger::absolute_path_to_logs = "C:\\Users\\hamza\\Documnets\\Projects\\hamza-backend-web-library-cpp\\logs\\";
         hh_web::logger::enabled_logging = true;
         hh_http::config::MAX_BODY_SIZE = 1024 * 64;
         hh_http::config::MAX_HEADER_SIZE = 1024 * 4;
-        hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(20);
+        hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(60);
 
         hh_http::epoll_config::BACKLOG_SIZE = 1024 * 1024;       // Set maximum number of pending connections
         hh_http::epoll_config::MAX_FILE_DESCRIPTORS = 1024 * 64; // Set maximum number of open files (open connections at the same time)
@@ -374,9 +416,7 @@ int main()
         api_router->add_route(update_item_route);
 
         // DELETE /api/items/:id - Delete item
-        auto delete_item_route = std::make_shared<web_route<>>(DELETE, "/api/items/:id", V({delete_item_handler}));
-
-        api_router->add_route(delete_item_route);
+        api_router->delete_("/api/items/:id", V({ delete_item_handler }));
 
         auto index = std::make_shared<web_route<>>(GET, "/", V({index_handler}));
 

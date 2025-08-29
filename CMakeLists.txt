@@ -127,6 +127,8 @@ else()
     add_library(hh_web_framework STATIC ${SRC_FILES})
 endif()
 
+target_compile_definitions(hh_web_framework PRIVATE CPP_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/")
+
 
 # Find and link pthread
 find_package(Threads REQUIRED)

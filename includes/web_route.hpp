@@ -148,9 +148,9 @@ namespace hh_web
                 {
                     return exit_code::EXIT;
                 }
-                else if (resp == exit_code::ERROR)
+                else if (resp == exit_code::_ERROR)
                 {
-                    return exit_code::ERROR;
+                    return exit_code::_ERROR;
                 }
                 else if (resp == exit_code::CONTINUE)
                 {
