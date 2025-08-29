@@ -1,8 +1,11 @@
 # Simple C++ Backend Web Library
 
-A simple C++ Web Framework for building some web applications. Built over the HTTP server I built here [hamza-http-server](https://github.com/HamzaHassanain/hamza-http-server-lib)
+A simple C++ Web Framework for building some web applications. 
 
-It also Uses these two libraries:
+
+Built over the HTTP server I built here [hamza-http-server](https://github.com/HamzaHassanain/hamza-http-server-lib)
+
+It also uses these two libraries:
 
 [hamza-json-parser](https://github.com/HamzaHassanain/hamza-json-parser) For JSON parsing and manipulation.
 
