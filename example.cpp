@@ -338,6 +338,10 @@ int main()
         hh_http::config::MAX_HEADER_SIZE = 1024 * 4;
         hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(20);
 
+        hh_http::epoll_config::BACKLOG_SIZE = 1024 * 1024;       // Set maximum number of pending connections
+        hh_http::epoll_config::MAX_FILE_DESCRIPTORS = 1024 * 64; // Set maximum number of open files (open connections at the same time)
+        hh_http::epoll_config::TIMEOUT_MILLISECONDS = 1000;      // Set timeout for epoll wait
+
         // Create server instance
         auto server = std::make_shared<hh_web::web_server<>>(port, host);
 
@@ -385,10 +389,10 @@ int main()
         server->use_static("static");
 
         // Custom 404 handler
-        server->register_unmatched_route_handler(un_matched_route_handler);
+        server->use_default(un_matched_route_handler);
 
-        server->register_headers_received_callback([](HEADER_RECEIVED_PARAMS)
-                                                   { hh_web::logger::info("Headers received");
+        server->use_headers_received([](HEADER_RECEIVED_PARAMS)
+                                     { hh_web::logger::info("Headers received");
                                                     hh_web::logger::info(method + " " + uri + " " + version);
                                                         for (const auto &[key, value] : headers)
                                                         {

@@ -165,6 +165,9 @@ namespace hh_web
             return hh_web::get_query_parameters(request.get_uri());
         }
 
+        /// @brief Get a specific query parameter by name.
+        /// @param key Name of the query parameter to retrieve
+        /// @return Value of the query parameter or an empty string if not found
         virtual std::string get_query_parameter(const std::string &key) const
         {
             auto params = get_query_parameters();

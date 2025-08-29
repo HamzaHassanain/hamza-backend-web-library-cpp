@@ -73,7 +73,7 @@ namespace hh_web
         std::function<void(HEADER_RECEIVED_PARAMS)> headers_callback = nullptr;
 
         /// Handler for unmatched routes (404 responses)
-        web_request_handler_t<T, G> handle_unmatched_route = []([[maybe_unused]] std::shared_ptr<T> req, std::shared_ptr<G> res) -> exit_code
+        web_request_handler_t<T, G> handle_default_route = []([[maybe_unused]] std::shared_ptr<T> req, std::shared_ptr<G> res) -> exit_code
         {
             res->set_status(404, "Not Found");
             res->send_text("404 Not Found");
@@ -127,16 +127,16 @@ namespace hh_web
          * @brief Set custom handler for unmatched routes.
          * @param handler Function to handle 404 cases
          */
-        virtual void register_unmatched_route_handler(const web_request_handler_t<T, G> &handler)
+        virtual void use_default(const web_request_handler_t<T, G> &handler)
         {
-            handle_unmatched_route = handler;
+            handle_default_route = handler;
         }
         /**
          * @brief Register a callback for when headers are received.
          * @note default is no action
          * @param callback
          */
-        virtual void register_headers_received_callback(const std::function<void(HEADER_RECEIVED_PARAMS)> &callback)
+        virtual void use_headers_received(const std::function<void(HEADER_RECEIVED_PARAMS)> &callback)
         {
             headers_callback = callback;
         }
@@ -146,7 +146,7 @@ namespace hh_web
          * @note if not set, the default server behavior is used
          * @param callback
          */
-        virtual void register_unhandled_exception_callback(web_unhandled_exception_callback_t<T, G> callback)
+        virtual void use_error(web_unhandled_exception_callback_t<T, G> callback)
         {
             unhandled_exception_callback = callback;
         }
@@ -299,7 +299,7 @@ namespace hh_web
                 }
 
                 if (!handled) // not handled yet, fallback to 404, user may add custom handlers
-                    handle_unmatched_route(req, res);
+                    handle_default_route(req, res);
 
                 res->send();
                 res->end();

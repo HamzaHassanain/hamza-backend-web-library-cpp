@@ -109,7 +109,7 @@ set(GIT_SUBMODULE_UPDATE_LATEST ON CACHE BOOL "Enable submodule updates" FORCE)
 
 # Disable submodule checking for all libraries.
 # I recommend you uncomment these two lines once the building process is done for the first time
-# Just comment it when you need to update to the latest version of the library 
+# Just comment it when you need to update to the latest version of the library
 # set(GIT_SUBMODULE OFF CACHE BOOL "Disable submodule checking" FORCE)
 # set(GIT_SUBMODULE_UPDATE_LATEST OFF CACHE BOOL "Disable submodule updates" FORCE)
 
@@ -173,9 +173,9 @@ Then in your cpp file, include the http library header:
 ### Simple web server
 
 ```cpp
-#include "submodules/web-lib/web-lib.hpp"
-#include "submodules/web-lib/libs/json/json-parser.hpp"
-#include "submodules/web-lib/libs/html-builder/html-builder.hpp"
+#include "submodules/web-lib/web-lib.hpp" // to use the web library
+#include "submodules/web-lib/libs/json/json-parser.hpp" // to use the json parser library
+#include "submodules/web-lib/libs/html-builder/html-builder.hpp" // to use the html builder library
 
 int main() {
     hh_web::web_server server;
@@ -186,7 +186,31 @@ int main() {
     // Create server instance
     auto server = std::make_shared<hh_web::web_server<>>(port, host);
 
-    server->start();
+    // Create API router
+    auto api_router = std::make_shared<hh_web::web_router<>>();
+
+    // Add CORS middleware
+    api_router->use(CORS);
+
+    // Define routes
+    using V = std::vector<hh_web::web_request_handler_t<>>;
+    using hh_web::web_route;
+
+    // GET /api/items - Get all items
+    auto all_items_route = std::make_shared<web_route<>>(GET, "/api/items", V({get_all_items_handler}));
+    api_router->add_route(all_items_route);
+
+    // POST /api/items - Create new item with security validation
+    auto create_route = std::make_shared<web_route<>>(POST, "/api/items", V({security_middleware, create_handler}));
+    api_router->add_route(create_route);
+
+    // Register router with server
+    server->use_router(api_router);
+
+    // Register static files directory
+    server->use_static("static");
+
+    server->listen();
     return 0;
 }
 ```
@@ -413,6 +437,26 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   virtual std::string get_body() const // — returns request body content
 // - Parameter extraction (all virtual):
   virtual std::vector<std::pair<std::string, std::string>> get_path_params() const // — extracts path parameters from URI
+
+  // Get the query parameters from the request URI.
+  virtual std::vector<std::pair<std::string, std::string>> get_query_parameters() const
+
+  // Get a specific query parameter by name.
+  virtual std::string get_query_parameter(const std::string &key) const
+
+  // Params are custom key-value pairs associated with the request.
+
+  // set a custom request parameter
+  virtual void set_param(const std::string &key, const std::string &value)
+  // Get a specific request parameter by name.
+  virtual std::string get_param(const std::string &key) const
+  // Get all custom request parameters.
+  virtual std::map<std::string, std::string> get_params() const
+  // Clear all custom request parameters.
+  virtual void clear_params()
+  // Remove a specific request parameter by name.
+  virtual void remove_param(const std::string &key)
+
   virtual void set_path_params(const std::vector<std::pair<std::string, std::string>> &params) // — sets path parameters (used internally)
   virtual std::vector<std::pair<std::string, std::string>> get_query_parameters() const // — parses query string parameters
 // - Header access (all virtual):
@@ -448,10 +492,11 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   virtual void set_content_type(const std::string &content_type) // — sets Content-Type header
 // - Header management (all virtual):
   virtual void add_header(const std::string &key, const std::string &value) // — adds HTTP header
+  virtual void set_header(const std::string &key, const std::string &value) // — Removes all values for this header from the request, and sets a new value
   virtual void add_trailer(const std::string &key, const std::string &value) // — adds HTTP trailer
   virtual void add_cookie(const std::string &name, const std::string &cookie, const std::string &attributes = "") // — adds cookie with optional attributes
 // - Response transmission (all virtual):
-  virtual void send() noexcept // — finalizes and sends response (thread-safe, idempotent)
+  virtual void send(const std::string &body = "") noexcept // — finalizes and sends response (thread-safe, idempotent)
   virtual void send_json(const std::string &json_data) // — formats and sends JSON response
   virtual void send_html(const std::string &html_data) // — formats and sends HTML response
   virtual void send_text(const std::string &text_data) // — formats and sends plain text response
@@ -509,11 +554,16 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
 // - Construction:
   web_router() // — creates empty router with compile-time type safety validation
 // - Router configuration (all virtual):
-  virtual void register_route(std::shared_ptr<web_route<T, G>> route) // — adds new route to router
-  virtual void register_middleware(const web_request_handler_t<T, G> &middleware) // — adds middleware handler
+  virtual void add_route(std::shared_ptr<web_route<T, G>> route) // — adds new route to router
+  virtual void use(const web_request_handler_t<T, G> &middleware) // — adds middleware handler
 // - Request processing (all virtual):
   virtual bool handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response) // — processes request through middleware and routes
   virtual exit_code middleware_handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response) // — processes request through middleware only
+  // - Convenience route registration methods:
+  void get(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a GET route with the specified path and handlers
+  void post(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a POST route with the specified path and handlers
+  void put(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a PUT route with the specified path and handlers
+  void delete_(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a DELETE route with the specified path and handlers
 // - Template type requirements:
   // - T must derive from web_request (enforced with static_assert)
   // - G must derive from web_response (enforced with static_assert)
@@ -542,11 +592,21 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
 // - Construction:
   web_server(uint16_t port, const std::string &host = "0.0.0.0") // — creates server instance listening on specified port/host
 // - Server configuration (all virtual):
-  virtual void register_router(std::shared_ptr<web_router<T, G>> router) // — adds a router for request handling
-  virtual void register_static(const std::string &directory) // — registers directory for static file serving
-  virtual void register_unmatched_route_handler(const web_request_handler_t<T, G> &handler) // — sets custom 404 handler
-  virtual void register_headers_received_callback(const std::function<void(HEADER_RECEIVED_PARAMS)> &callback) // — sets callback for header processing
-  virtual void register_unhandled_exception_callback(web_unhandled_exception_callback_t<T, G> callback) // — sets callback for unhandled exceptions
+  virtual void use_router(std::shared_ptr<web_router<T, G>> router) // — adds a router for request handling
+  virtual void use_static(const std::string &directory) // — registers directory for static file serving
+  virtual void use_default(const web_request_handler_t<T, G> &handler) // — sets custom 404 handler
+  virtual void use_headers_received(const std::function<void(HEADER_RECEIVED_PARAMS)> &callback) // — sets callback for header processing
+  virtual void use_error(web_unhandled_exception_callback_t<T, G> callback) // — sets callback for unhandled exceptions
+
+
+  // Functions below work with the default router added for the web_server on initialization.
+
+  // - Convenience route registration methods:
+  void get(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a GET route with the specified path and handlers
+  void post(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a POST route with the specified path and handlers
+  void put(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a PUT route with the specified path and handlers
+  void delete_(const std::string &path, std::vector<web_request_handler_t<T, G>> handlers) // — registers a DELETE route with the specified path and handlers
+
 // - Server control (all virtual):
   virtual void listen(web_listen_callback_t listen_callback = nullptr, web_error_callback_t error_callback = nullptr) // — starts server with optional callbacks
   virtual void stop() // — stops server and terminates worker threads
@@ -558,6 +618,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
 // - Template type requirements:
   // - T must derive from web_request (enforced with static_assert)
   // - G must derive from web_response (enforced with static_assert)
+  // - R must derive from web_router (enforced with static_assert)
   // - Provides strong typing guarantees at compile time
 // - Design features:
   // - Worker thread pool for high concurrency
@@ -579,6 +640,7 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Path manipulation and validation
   // - MIME type detection
   // - Route pattern matching
+  // - Security content validation
 // - Static file utilities:
   extern const std::vector<std::string> static_extensions // — list of known static file extensions
   extern const std::unordered_map<std::string, std::string> mime_types // — mapping of file extensions to MIME types
@@ -597,11 +659,14 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   std::pair<bool, std::vector<std::pair<std::string, std::string>>> match_path(const std::string &expression, const std::string &rhs) // — matches route pattern against actual path
 // - HTTP method validation:
   bool unknown_method(const std::string &method) // — checks if HTTP method is valid
+// - Security validation:
+  bool body_has_malicious_content(const std::string &body, bool XSS = true, bool SQL = true, bool CMD = true) // — detects XSS, SQL injection, and command injection attacks
 // - Design features:
   // - Pure utility functions with no state
   // - Security-focused path handling
   // - Comprehensive MIME type support
   // - Efficient parameter extraction
+  // - Built-in security scanning for malicious content
 ```
 
 ### hh_web::web_types
@@ -676,4 +741,97 @@ For detailed method signatures and advanced usage patterns, consult the comprehe
   // - Thread-safe with mutex protection
   // - Separate files for different log levels
   // - Minimal overhead when disabled
+```
+
+### Logger Configuration
+
+```cpp
+#include "logger.hpp"
+
+
+int main() {
+
+    // Set log directory
+  hh_web::logger::absolute_path_to_logs = "/var/log/myapp/";
+
+  // Enable/disable logging
+  hh_web::logger::enabled_logging = true;
+
+
+}
+
+```
+
+## Security Features
+
+### Content Security Validation
+
+```cpp
+#include "web_utilities.hpp"
+
+// Check for malicious content in request bodies
+bool is_malicious = hh_web::body_has_malicious_content(request_body);
+
+// Check specific threat types
+bool has_xss = hh_web::body_has_malicious_content(request_body, true, false, false);  // XSS only
+bool has_sql = hh_web::body_has_malicious_content(request_body, false, true, false); // SQL injection only
+bool has_cmd = hh_web::body_has_malicious_content(request_body, false, false, true); // Command injection only
+```
+
+**Security Checks Include:**
+
+- **XSS (Cross-Site Scripting)**: Detects `<script>`, `javascript:`, `onerror=`, etc.
+- **SQL Injection**: Detects `SELECT`, `UNION`, `DROP`, `' OR '1'='1`, etc.
+- **Command Injection**: Detects shell commands, file system access, etc.
+- **Content Size Limits**: Prevents oversized payloads that could cause DoS
+
+### Security Middleware Example
+
+```cpp
+#include "web_lib.hpp"
+
+hh_web::exit_code security_middleware(std::shared_ptr<hh_web::web_request> req, std::shared_ptr<hh_web::web_response> res)
+{
+    if (hh_web::body_has_malicious_content(req->get_body()))
+    {
+        hh_web::logger::error("Malicious content detected");
+        res->set_status(400, "Bad Request");
+        res->send_json("{\"error\": \"Malicious content detected\"}");
+        return hh_web::exit_code::EXIT;
+    }
+    return hh_web::exit_code::CONTINUE;
+}
+
+// Apply security middleware to routes
+auto secure_route = std::make_shared<web_route<>>(POST, "/api/items",
+    std::vector<hh_web::web_request_handler_t<>>{security_middleware, create_handler});
+```
+
+## Configuration Options
+
+The framework provides several configuration options for fine-tuning server behavior:
+
+### HTTP Server Configuration
+
+```cpp
+#include "libs/http-server/http-lib.hpp"
+
+// Set maximum body size (default: 64KB)
+hh_http::config::MAX_BODY_SIZE = 1024 * 64;  // 64KB
+
+// Set maximum header size (default: 4KB)
+hh_http::config::MAX_HEADER_SIZE = 1024 * 4;  // 4KB
+
+// Set connection idle timeout (default: 2 seconds)
+hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(20);
+
+ // Set maximum number of pending connections
+hh_http::epoll_config::BACKLOG_SIZE = 1024 * 1024;
+
+// Set maximum number of open files (open connections at the same time)
+hh_http::epoll_config::MAX_FILE_DESCRIPTORS = 1024 * 64;
+
+// Set timeout for epoll wait
+hh_http::epoll_config::TIMEOUT_MILLISECONDS = 1000;
+
 ```
