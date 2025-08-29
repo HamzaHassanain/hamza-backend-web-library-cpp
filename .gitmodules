@@ -3,7 +3,7 @@
 	url = https://github.com/HamzaHassanain/hamza-http-server-lib.git
 [submodule "libs/html-builder"]
 	path = libs/html-builder
-	url = git@github.com:HamzaHassanain/hamza-html-builder.git
+	url = https://github.com/HamzaHassanain/hamza-html-builder.git
 
 [submodule "libs/json"]
 	path = libs/json
