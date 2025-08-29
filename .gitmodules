@@ -1,10 +1,6 @@
 [submodule "libs/http-server"]
 	path = libs/http-server
 	url = https://github.com/HamzaHassanain/hamza-http-server-lib.git
-[submodule "libs/html-builder"]
-	path = libs/html-builder
-	url = https://github.com/HamzaHassanain/hamza-html-builder.git
-
 [submodule "libs/json"]
 	path = libs/json
 	url = https://github.com/HamzaHassanain/hamza-json-parser.git
