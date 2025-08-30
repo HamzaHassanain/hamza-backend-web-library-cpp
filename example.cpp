@@ -12,7 +12,7 @@
 #include "web-lib.hpp"
 
 using namespace hh_json;
-//using hh_web::methods::DELETE;
+// using hh_web::methods::DELETE;
 using hh_web::methods::GET;
 using hh_web::methods::POST;
 using hh_web::methods::PUT;
@@ -285,9 +285,6 @@ hh_web::exit_code index_handler(std::shared_ptr<hh_web::web_request> req, std::s
 
     )";
 
-
-   
-
     res->set_status(200, "OK");
     res->send_html(html_doc);
     return hh_web::exit_code::EXIT;
@@ -325,7 +322,6 @@ hh_web::exit_code un_matched_route_handler(std::shared_ptr<hh_web::web_request> 
             </body>
             </html>
 )";
-
 
         res->send_html(four04);
     }
@@ -374,15 +370,15 @@ int main()
     {
         int port = 3000;
         std::string host = "0.0.0.0";
-        hh_web::logger::absolute_path_to_logs = "C:\\Users\\hamza\\Documnets\\Projects\\hamza-backend-web-library-cpp\\logs\\";
-        hh_web::logger::enabled_logging = true;
-        hh_http::config::MAX_BODY_SIZE = 1024 * 64;
-        hh_http::config::MAX_HEADER_SIZE = 1024 * 4;
-        hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(60);
+        // hh_web::logger::absolute_path_to_logs = "C:\\Users\\hamza\\Documnets\\Projects\\hamza-backend-web-library-cpp\\logs\\";
+        // hh_web::logger::enabled_logging = true;
+        // hh_http::config::MAX_BODY_SIZE = 1024 * 64;
+        // hh_http::config::MAX_HEADER_SIZE = 1024 * 4;
+        // hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(60);
 
-        hh_http::epoll_config::BACKLOG_SIZE = 1024 * 1024;       // Set maximum number of pending connections
-        hh_http::epoll_config::MAX_FILE_DESCRIPTORS = 1024 * 64; // Set maximum number of open files (open connections at the same time)
-        hh_http::epoll_config::TIMEOUT_MILLISECONDS = 1000;      // Set timeout for epoll wait
+        // hh_http::epoll_config::BACKLOG_SIZE = 1024 * 1024;       // Set maximum number of pending connections
+        // hh_http::epoll_config::MAX_FILE_DESCRIPTORS = 1024 * 64; // Set maximum number of open files (open connections at the same time)
+        // hh_http::epoll_config::TIMEOUT_MILLISECONDS = 1000;      // Set timeout for epoll wait
 
         // Create server instance
         auto server = std::make_shared<hh_web::web_server<>>(port, host);
@@ -416,7 +412,7 @@ int main()
         api_router->add_route(update_item_route);
 
         // DELETE /api/items/:id - Delete item
-        api_router->delete_("/api/items/:id", V({ delete_item_handler }));
+        api_router->delete_("/api/items/:id", V({delete_item_handler}));
 
         auto index = std::make_shared<web_route<>>(GET, "/", V({index_handler}));
 

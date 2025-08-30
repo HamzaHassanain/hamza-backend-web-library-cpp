@@ -39,6 +39,7 @@ namespace hh_web
      *
      * @tparam T Request type (must derive from web_request)
      * @tparam G Response type (must derive from web_response)
+     * @tparam R Router type (must derive from web_router<T, G>)
      */
     template <typename T = web_request, typename G = web_response, typename R = web_router<T, G>>
     class web_server : public hh_http::http_server
@@ -120,7 +121,7 @@ namespace hh_web
          */
         virtual void use_static(const std::string &directory)
         {
-            static_directories.push_back(CPP_PROJECT_SOURCE_DIR+directory);
+            static_directories.push_back(CPP_PROJECT_SOURCE_DIR + directory);
         }
 
         /**

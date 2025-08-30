@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog API Documentation</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Blog API Documentation</h1>
+      <p>Welcome to the Blog API built with HH Web Framework!</p>
+
+      <h2>Public Endpoints</h2>
+      <ul>
+        <li><strong>GET /api/blogs</strong> - Get all published blog posts</li>
+        <li>
+          <strong>GET /api/blogs/:id</strong> - Get a specific published blog
+          post
+        </li>
+      </ul>
+
+      <h2>Authentication</h2>
+      <ul>
+        <li>
+          <strong>POST /api/auth/login</strong> - Admin login (username: admin,
+          password: admin)
+        </li>
+        <li><strong>POST /api/auth/logout</strong> - Admin logout</li>
+      </ul>
+
+      <h2>Admin Endpoints (Requires Authentication)</h2>
+      <ul>
+        <li>
+          <strong>GET /api/admin/blogs</strong> - Get all blog posts (including
+          unpublished)
+        </li>
+        <li><strong>POST /api/admin/blogs</strong> - Create a new blog post</li>
+        <li><strong>PUT /api/admin/blogs/:id</strong> - Update a blog post</li>
+        <li>
+          <strong>DELETE /api/admin/blogs/:id</strong> - Delete a blog post
+        </li>
+      </ul>
+
+      <h3>Example Login Request:</h3>
+      <pre>
+POST /api/auth/login
+{
+    "username": "admin",
+    "password": "admin"
+}</pre
+      >
+
+      <h3>Example Blog Creation:</h3>
+      <pre>
+POST /api/admin/blogs
+Authorization: Bearer YOUR_TOKEN
+{
+    "title": "My First Blog",
+    "content": "This is the content of my blog post...",
+    "author": "Admin",
+    "published": true
+}</pre
+      >
+
+      <p>
+        Use the token from login response in Authorization header for admin
+        endpoints.
+      </p>
+    </div>
+  </body>
+</html>
