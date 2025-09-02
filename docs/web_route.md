@@ -36,7 +36,7 @@ Behavior and notes:
 - Validates at runtime that at least one handler is provided; throws `std::invalid_argument` if `handlers.size() == 0`.
 - The implementation performs `handlers(std::move(handlers))` when initializing the member. Because the constructor parameter is a const-reference, `std::move` will not yield a true non-const rvalue that can be efficiently moved from; this works (produces a copy) but is a possible micro-optimization point: accepting the parameter by value (and then moving) or by rvalue-reference would allow the caller to move handlers cheaply.
 
-## Matching: `match(std::shared_ptr<T> request) const`
+##  `match(std::shared_ptr<T> request) const`
 
 Purpose:
 
@@ -53,7 +53,7 @@ Notes:
 
 - `match_path` encapsulates the parsing/matching semantics (parameter syntax, wildcard handling). Because `match` always calls `match_path` before checking the method, the path-parameter population will occur even if the method does not match. This is harmless but worth noting for performance-sensitive code.
 
-## Handling requests: `handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response) const`
+## `handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response) const`
 
 Purpose:
 
