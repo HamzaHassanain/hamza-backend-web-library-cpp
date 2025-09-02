@@ -36,37 +36,38 @@ Compile-time checks (`static_assert`) in the constructor enforce these constrain
 
 ## Constructor and lifecycle
 
-- `web_server(int port, const std::string &host = "0.0.0.0")`
+- ### `web_server(int port, const std::string &host = "0.0.0.0")`
 
   - Initializes the underlying `hh_http::http_server` and `worker_pool`.
   - Performs `static_assert` checks for template parameter correctness.
   - Creates and registers a default router `std::make_shared<R>()` in `routers[0]`.
 
-- `listen(...)`
+- ### `listen(...)`
 
   - Optionally accept custom listen and error callbacks. Calls `hh_http::http_server::listen()` to start accepting connections.
   - When the underlying server reports successful listen, `on_listen_success()` invokes the configured `listen_callback`.
 
-- `stop()`
+- ### `stop()`
   - Calls `hh_http::http_server::stop_server()` and stops the `worker_pool` (waits for tasks to finish and joins workers as the pool implementation requires).
 
 ## Registration / configuration methods
 
-- `use_router(std::shared_ptr<web_router<T, G>> router)` — append a router to `routers`. Routers are consulted in order when handling requests.
+- #### `use_router(std::shared_ptr<web_router<T, G>> router)` — append a router to `routers`. Routers are consulted in order when handling requests.
 
-- `use_static(const std::string &directory)` — register a directory to be used for static file serving. The implementation prefixes the provided directory with `CPP_PROJECT_SOURCE_DIR` (project-specific macro) before storing.
+- #### `use_static(const std::string &directory)` — register a directory to be used for static file serving. The implementation prefixes the provided directory with `CPP_PROJECT_SOURCE_DIR` (project-specific macro) before storing.
 
-- `use_default(const web_request_handler_t<T, G> &handler)` — replace the default 404 handler.
+- #### `use_default(const web_request_handler_t<T, G> &handler)` — replace the default 404 handler.
 
-- `use_headers_received(const std::function<void(HEADER_RECEIVED_PARAMS)> &callback)` — set a callback that will be invoked by `on_headers_received` (this allows logging, connection-closing or header-based decisions before the request body is handled).
+- #### `use_headers_received(const std::function<void(HEADER_RECEIVED_PARAMS)> &callback)` — set a callback that will be invoked by `on_headers_received` (this allows logging, connection-closing or header-based decisions before the request body is handled).
 
 - `use_error(web_unhandled_exception_callback_t<T, G> callback)` — set a custom handler to be invoked when an unhandled `web_exception` occurs during request processing.
 
 ## Route registration helpers (convenience)
 
-- `get`, `post`, `put`, `delete_` — helper methods that create a `web_route<T,G>` for the base router (`routers[0]`) and register it. Handlers are passed as a `std::vector<web_request_handler_t<T, G>>`.
+- ### `get`, `post`, `put`, `delete_`
+helper methods that create a `web_route<T,G>` for the base router (`routers[0]`) and register it. Handlers are passed as a `std::vector<web_request_handler_t<T, G>>`.
 
-## Serving static files: `serve_static(std::shared_ptr<T> req, std::shared_ptr<G> res)`
+## `serve_static(std::shared_ptr<T> req, std::shared_ptr<G> res)`
 
 - Flow and implementation notes:
 
@@ -80,7 +81,7 @@ Compile-time checks (`static_assert`) in the constructor enforce these constrain
   - The implementation uses `std::ifstream` to detect and read files. Large file serving may need streaming / chunked transfer for production use.
   - MIME detection relies on utility helpers based on file extension.
 
-## Main request flow: `request_handler(std::shared_ptr<T> req, std::shared_ptr<G> res)`
+## `request_handler(std::shared_ptr<T> req, std::shared_ptr<G> res)`
 
 This is the worker-thread function that processes a single request end-to-end. Implementation steps:
 
@@ -94,7 +95,7 @@ Notes and observations:
 - The implementation calls `res->send()` and `res->end()` both inside the normal path and again after the `try/catch` block. This appears defensive to ensure the response is finalized even if some code path above skipped finalization.
 - `request_handler` expects router handlers and middleware to be synchronous — they run on the worker thread. If asynchronous behavior is desired, handlers must manage their own threading and ensure that response finalization is coordinated.
 
-## Low-level callback: `on_request_received(hh_http::http_request &request, hh_http::http_response &response)`
+## `on_request_received(hh_http::http_request &request, hh_http::http_response &response)`
 
 - Purpose: This is the override invoked by the low-level HTTP server when a request is received. The method's job is to convert low-level objects to framework objects and enqueue the processing on the worker pool.
 
@@ -116,7 +117,7 @@ Notes and observations:
 - `on_exception_occurred(const std::exception &e)` — forwards to `error_callback(e)` to allow centralized error reporting.
 - `on_headers_received(HEADER_RECEIVED_PARAMS)` — forwards to user-provided `headers_callback` if set. The `HEADER_RECEIVED_PARAMS` macro expands to a signature that includes the low-level connection object, headers multimap, method, uri, version, and body. Users may inspect or close the connection inside this callback.
 
-## Unhandled exception handling: `on_unhandled_exception(std::shared_ptr<T> req, std::shared_ptr<G> res, web_exception &e)`
+## `on_unhandled_exception(std::shared_ptr<T> req, std::shared_ptr<G> res, web_exception &e)`
 
 - Behavior:
 
