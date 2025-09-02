@@ -36,83 +36,83 @@ Note: Do not instantiate `web_request` directly in application code. The framewo
 
 All listed member functions are `virtual` to allow overriding in derived request types.
 
-- `std::vector<std::pair<std::string, std::string>> get_path_params() const`
+- ### `std::vector<std::pair<std::string, std::string>> get_path_params() const`
 
   - Returns the `path_params` vector (name/value pairs) extracted by the router. Implementation simply returns the stored `path_params`. Access is const but modifications must be done using `set_path_params` (protected by mutex).
 
-- `void set_path_params(const std::vector<std::pair<std::string, std::string>> &params)`
+- ### `void set_path_params(const std::vector<std::pair<std::string, std::string>> &params)`
 
   - Sets the `path_params` vector. Intended to be called by the routing layer (`web_route` / `web_server`) while holding the appropriate context. The method locks `path_params_mutex` to perform the assignment safely.
 
-- `std::string get_method() const`
+- ### `std::string get_method() const`
 
   - Proxy to `request.get_method()` — returns the HTTP method string (e.g., `"GET"`, `"POST"`).
 
-- `std::string get_path() const`
+- ### `std::string get_path() const`
 
   - Returns only the path component of the URI (no query string) by calling `hh_web::get_path(request.get_uri())`. The underlying implementation uses `web_utilities` helpers to split and normalize the URI.
 
-- `std::string get_uri() const`
+- ### `std::string get_uri() const`
 
   - Returns the full request URI via `request.get_uri()` (path + query + fragment if present).
 
-- `std::vector<std::pair<std::string, std::string>> get_query_parameters() const`
+- ### `std::vector<std::pair<std::string, std::string>> get_query_parameters() const`
 
   - Parses the query string portion of the URI and returns all parameters as vector of name/value pairs. Delegates to `hh_web::get_query_parameters(request.get_uri())` which handles URL decoding and splitting.
 
-- `std::string get_query_parameter(const std::string &key) const`
+- ### `std::string get_query_parameter(const std::string &key) const`
 
   - Convenience lookup: iterates the vector returned by `get_query_parameters()` and returns the first matching value or empty string if absent.
 
-- `std::string get_version() const`
+- ### `std::string get_version() const`
 
   - Proxy to `request.get_version()` — returns HTTP version (e.g., `"HTTP/1.1"`).
 
-- `std::vector<std::string> get_header(const std::string &name) const`
+- ### `std::vector<std::string> get_header(const std::string &name) const`
 
   - Proxy to `request.get_header(name)` which returns all header values for a normalized header name. The underlying `http_request` normalizes header names (upper-case) for consistent lookup.
 
-- `std::vector<std::pair<std::string, std::string>> get_headers() const`
+- ### `std::vector<std::pair<std::string, std::string>> get_headers() const`
 
   - Proxy to `request.get_headers()` that returns all headers as name/value pairs.
 
-- `std::string get_body() const`
+- ### `std::string get_body() const`
 
   - Proxy to `request.get_body()` that returns the request body as a string.
 
-- `std::vector<std::string> get_content_type() const`
+- ### `std::vector<std::string> get_content_type() const`
 
   - Convenience: `request.get_header(hh_http::HEADER_CONTENT_TYPE)`.
 
-- `std::vector<std::string> get_cookies() const`
+- ### `std::vector<std::string> get_cookies() const`
 
   - Convenience: `request.get_header(hh_http::HEADER_COOKIE)`.
 
-- `std::vector<std::string> get_authorization() const`
+- ### `std::vector<std::string> get_authorization() const`
 
   - Convenience: `request.get_header(hh_http::HEADER_AUTHORIZATION)`.
 
-- `bool keep_alive() const`
+- ### `bool keep_alive() const`
 
   - Returns true when the `Connection` header indicates `Keep-Alive` (case-insensitive). Implementation collects `Connection` header values, upper-cases them and searches for `"KEEP-ALIVE"`.
 
-- `void set_param(const std::string &key, const std::string &value)`
+- ### `void set_param(const std::string &key, const std::string &value)`
 
   - Store an application-visible parameter in `request_params` map. Useful for middleware and handlers to pass small bits of data.
 
-- `std::string get_param(const std::string &key) const`
+- ### `std::string get_param(const std::string &key) const`
 
   - Returns the value for a key in `request_params` or empty string if not present.
 
-- `std::map<std::string, std::string> get_params() const`
+- ### `std::map<std::string, std::string> get_params() const`
 
   - Returns a copy of `request_params` map.
 
-- `void clear_params()`
+- ### `void clear_params()`
 
   - Clears the `request_params` map.
 
-- `void remove_param(const std::string &key)`
+- ### `void remove_param(const std::string &key)`
   - Removes a parameter from `request_params`.
 
 ## Underlying implementation notes
