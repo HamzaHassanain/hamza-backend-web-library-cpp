@@ -43,39 +43,39 @@ All methods are `virtual` so you can override behavior in derived response types
 
   - Sets the HTTP status code and message for the response. If `status_message` is empty, the implementation selects a default message category based on the status code range (2xx: OK, 3xx: Redirection, 4xx: Client Error, 5xx: Internal Server Error). The method locks `modify_headers_mutex` while updating status.
 
-- `void send_json(const std::string &json_data)`
+- ### `void send_json(const std::string &json_data)`
 
   - Convenience method to set `Content-Type: application/json`, set the response body and `Content-Length`, then call `send()` to transmit the response.
 
-- `void send_html(const std::string &html_data)`
+- ### `void send_html(const std::string &html_data)`
 
   - Convenience method to set `Content-Type: text/html`, set the response body and `Content-Length`, then call `send()`.
 
-- `void send_text(const std::string &text_data)`
+- ### `void send_text(const std::string &text_data)`
 
   - Convenience method to set `Content-Type: text/plain`, set the response body and `Content-Length`, then call `send()`.
 
-- `void add_header(const std::string &key, const std::string &value)`
+- ### `void add_header(const std::string &key, const std::string &value)`
 
   - Adds an HTTP header to the response. Multiple headers with the same name may be added. Locks `modify_headers_mutex` during modification.
 
-- `void add_trailer(const std::string &key, const std::string &value)`
+- ### `void add_trailer(const std::string &key, const std::string &value)`
 
   - Adds a trailer to the response (used with chunked transfer encoding). Locks `modify_headers_mutex` while updating trailers.
 
-- `void add_cookie(const std::string &name, const std::string &cookie, const std::string &attributes = "")`
+- ### `void add_cookie(const std::string &name, const std::string &cookie, const std::string &attributes = "")`
 
   - Adds a `Set-Cookie` header for the provided name/value and optional attributes (e.g., `Path=/; Secure; HttpOnly`). The implementation formats the header correctly and uses `response.add_header("Set-Cookie", ...)`.
 
-- `void set_content_type(const std::string &content_type)`
+- ### `void set_content_type(const std::string &content_type)`
 
   - Convenience to set `Content-Type` header.
 
-- `void set_body(const std::string &body)`
+- ### `void set_body(const std::string &body)`
 
   - Sets the response body on the underlying response object. Locks `modify_headers_mutex` during the operation.
 
-- `void send(const std::string &body = "") noexcept`
+- ### `void send(const std::string &body = "") noexcept`
 
   - Finalizes and transmits the response. The method ensures it runs only once by using `did_send.exchange(true)` and returns early on subsequent calls. It checks `did_end` to avoid sending on an already-ended connection.
 
@@ -86,11 +86,11 @@ All methods are `virtual` so you can override behavior in derived response types
     - Locks `modify_headers_mutex` while checking/setting headers and body.
     - Performs the send via the underlying `hh_http::http_response` send mechanism inside a `try/catch` block to capture and log exceptions.
 
-- `void set_keep_alive(bool keep_alive)`
+- ### `void set_keep_alive(bool keep_alive)`
 
   - Sets appropriate headers for persistent connections when `keep_alive` is true (implementation guarded by `modify_headers_mutex`).
 
-- `void set_header(const std::string &name, const std::string &value)`
+- ### `void set_header(const std::string &name, const std::string &value)`
   - Replaces existing values for a header with a single new value (clears previous entries). Uses `modify_headers_mutex`.
 
 ## Underlying implementation notes
